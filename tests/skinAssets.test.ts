@@ -114,6 +114,33 @@ test("battle stage resource slots render with fallback-safe UI keys", () => {
   assert.equal(html.includes("url("), false);
 });
 
+test("fairy gameplay and battle backgrounds render as image resources", () => {
+  const html = renderGameplayScene({
+    state: createGameplayState(),
+    pieces: createPieces(),
+    selected: null,
+    message: "选择两个相邻棋子交换。",
+    lastEvents: [],
+    progress: createDefaultProgress(),
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: fairySkin,
+  });
+
+  assert.equal(fairySkin.resources.ft_gameplay_bg.available, true);
+  assert.equal(fairySkin.resources.ft_battle_stage_bg.available, true);
+  assert.equal(
+    html.includes("/assets/fairy/backgrounds/ft_gameplay_bg.png"),
+    true,
+  );
+  assert.equal(
+    html.includes("/assets/fairy/backgrounds/ft_battle_stage_bg.png"),
+    true,
+  );
+  assert.equal(html.includes("fairy-gameplay-bg has-image"), true);
+  assert.equal(html.includes("fairy-battle-stage has-image"), true);
+});
+
 test("attack pips follow enemy attack counter and interval", () => {
   const html = renderGameplayScene({
     state: {
@@ -184,6 +211,28 @@ test("board reshuffle event renders the short gameplay feedback", () => {
 
   assert.equal(html.includes("shuffle-pop"), true);
   assert.equal(html.includes("棋盘重排"), true);
+});
+
+test("damage numbers render on the battle layer instead of board feedback", () => {
+  const html = renderGameplayScene({
+    state: {
+      ...createGameplayState(),
+      lastDamage: 18,
+      lastComboCount: 3,
+    },
+    pieces: createPieces(),
+    selected: null,
+    message: "选择两个相邻棋子交换。",
+    lastEvents: [],
+    progress: createDefaultProgress(),
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: fairySkin,
+  });
+
+  assert.equal(html.includes("damage-float enemy-damage"), true);
+  assert.equal(html.includes("damage-pop"), false);
+  assert.equal(html.includes("3 COMBO"), true);
 });
 
 test("locked universe cards still render as locked fallback entries", () => {

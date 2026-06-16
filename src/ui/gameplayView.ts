@@ -174,7 +174,6 @@ export function renderGameplayScene(model: GameplayViewModel): string {
         </section>
 
         <footer class="bottom-status">
-          <div class="bottom-shield">护盾 ${state.playerShield}</div>
           <div class="bottom-score">当前积分 ${model.progress.totalPoints}</div>
           <button class="secondary-button compact" type="button" data-action="return-universe">返回宇宙</button>
         </footer>
@@ -618,16 +617,12 @@ function renderBoardFeedback(
         skillText,
       )}</div>`
     : "";
-  const damage =
-    state.lastDamage > 0
-      ? `<div class="damage-pop">-${formatNumber(state.lastDamage)}</div>`
-      : "";
   const combo =
     state.lastComboCount > 1
       ? `<div class="combo-pop">${formatComboText(state.lastComboCount)}</div>`
       : "";
 
-  return `<div class="board-feedback">${shuffle}${skill}${damage}${combo}</div>`;
+  return `<div class="board-feedback">${shuffle}${skill}${combo}</div>`;
 }
 
 function formatComboText(chainCount: number): string {
@@ -978,6 +973,10 @@ function renderLayoutVars(): string {
     `--canvas-width: ${PHONE_LAYOUT.canvas.width}`,
     `--canvas-height: ${PHONE_LAYOUT.canvas.height}`,
     `--board-design-size: ${PHONE_LAYOUT.board.designSize}px`,
+    `--board-width-ratio: ${(
+      (PHONE_LAYOUT.board.designSize / PHONE_LAYOUT.canvas.width) *
+      100
+    ).toFixed(3)}%`,
     `--touch-min: ${PHONE_LAYOUT.controls.minTouch}px`,
   ].join("; ");
 }

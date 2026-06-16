@@ -32,11 +32,13 @@ const fairyOverrides: Partial<
     fallbackLabel: "门窗宇宙",
   },
   ft_gameplay_bg: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-background fairy-gameplay-bg",
     fallbackLabel: "童话玩法背景",
   },
   ft_battle_stage_bg: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-background fairy-battle-stage",
     fallbackLabel: "童话战斗舞台",

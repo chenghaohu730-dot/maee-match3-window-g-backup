@@ -53,9 +53,15 @@ const FORMAL_BOARD_KEYS = [
   "ft_grid_cell_highlight",
 ] as const satisfies readonly AssetKey[];
 
+const FORMAL_BACKGROUND_KEYS = [
+  "ft_gameplay_bg",
+  "ft_battle_stage_bg",
+] as const satisfies readonly AssetKey[];
+
 const FORMAL_READY_KEYS = [
   ...FORMAL_PIECE_KEYS,
   ...FORMAL_BOARD_KEYS,
+  ...FORMAL_BACKGROUND_KEYS,
 ] as const satisfies readonly AssetKey[];
 
 test("fairySkin has paths for every first-batch fairy MVP asset", () => {
@@ -133,7 +139,27 @@ test("formal fairy board images render by default", () => {
   );
 });
 
-test("missing non-piece first-batch fairy MVP images stay on fallback", () => {
+test("formal fairy background images render by default", () => {
+  for (const key of FORMAL_BACKGROUND_KEYS) {
+    const resource = fairySkin.resources[key];
+
+    assert.equal(resource.available, true);
+    assert.equal(hasImageResource(resource), true);
+  }
+
+  const html = renderGameplayScene(createGameplayModel(fairySkin));
+
+  assert.equal(
+    html.includes("url('/assets/fairy/backgrounds/ft_gameplay_bg.png')"),
+    true,
+  );
+  assert.equal(
+    html.includes("url('/assets/fairy/backgrounds/ft_battle_stage_bg.png')"),
+    true,
+  );
+});
+
+test("missing remaining first-batch fairy MVP images stay on fallback", () => {
   for (const [key] of FAIRY_MVP_ASSETS) {
     if (isFormalReadyKey(key)) {
       continue;
@@ -150,7 +176,7 @@ test("missing non-piece first-batch fairy MVP images stay on fallback", () => {
   assert.equal(html.includes("uses-fallback"), true);
   assert.equal(
     html.includes("url('/assets/fairy/backgrounds/ft_gameplay_bg.png')"),
-    false,
+    true,
   );
   assert.equal(html.includes("MAEE"), true);
   assert.equal(html.includes("data-asset-key=\"ft_gameplay_bg\""), true);
