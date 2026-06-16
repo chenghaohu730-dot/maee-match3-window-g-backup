@@ -154,21 +154,25 @@ const fairyOverrides: Partial<
     fallbackLabel: "亿仔受击序列帧",
   },
   monster_slime_idle: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-slime-card",
     fallbackLabel: "森林史莱姆",
   },
   monster_slime_hit: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-slime-card",
     fallbackLabel: "森林史莱姆受击",
   },
   monster_slime_attack: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-slime-card",
     fallbackLabel: "森林史莱姆攻击",
   },
   monster_slime_defeat: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-slime-card",
     fallbackLabel: "森林史莱姆退场",

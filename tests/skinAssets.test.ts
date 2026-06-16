@@ -163,6 +163,63 @@ test("attack pips follow enemy attack counter and interval", () => {
   assert.equal(html.includes("2/4"), true);
 });
 
+test("gameplay footer shows high score instead of cumulative points", () => {
+  const html = renderGameplayScene({
+    state: createGameplayState(),
+    pieces: createPieces(),
+    selected: null,
+    message: "选择两个相邻棋子交换。",
+    lastEvents: [],
+    progress: {
+      ...createDefaultProgress(),
+      highestScore: 4321,
+      totalPoints: 9876,
+    },
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: fairySkin,
+  });
+
+  assert.equal(html.includes("最高分 4321"), true);
+  assert.equal(html.includes("当前积分 9876"), false);
+});
+
+test("passive gameplay renders do not replay previous skill effects", () => {
+  const html = renderGameplayScene({
+    state: {
+      ...createGameplayState(),
+      lastDamage: 34,
+      lastComboCount: 2,
+      lastSkillText: "flameSlash",
+      lastSkillLevel: "skill",
+      lastVfxKeys: ["red_skill_slash", "screenShake:medium"],
+    },
+    pieces: createPieces(),
+    selected: { x: 0, y: 0 },
+    message: "已选择 1,1。",
+    lastEvents: [
+      {
+        type: "skillTriggered",
+        skillId: "flameSlash",
+        level: "skill",
+        pieceType: 0,
+        extraDamage: 20,
+      },
+      { type: "vfx", key: "red_skill_slash" },
+    ],
+    progress: createDefaultProgress(),
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: fairySkin,
+    showTurnFeedback: false,
+  });
+
+  assert.equal(html.includes("火焰横扫"), false);
+  assert.equal(html.includes("vfx_red_skill_slash"), false);
+  assert.equal(html.includes("shake-medium"), false);
+  assert.equal(html.includes("data-animation-state=\"hit\""), false);
+});
+
 test("enemy ids map to readable monster names and combat state classes", () => {
   const events: GameplayEvent[] = [
     {
@@ -194,6 +251,54 @@ test("enemy ids map to readable monster names and combat state classes", () => {
   assert.equal(html.includes("enemy-state-hit"), true);
   assert.equal(html.includes("yizai-state-skill"), true);
   assert.equal(html.includes("火焰横扫"), true);
+});
+
+test("endless challenge renders infinite hp and lost results render zero score", () => {
+  const endlessHtml = renderGameplayScene({
+    state: {
+      ...createGameplayState(),
+      enemyId: "endless-challenge",
+      enemyName: "无尽挑战",
+      enemyHp: Number.POSITIVE_INFINITY,
+      enemyMaxHp: Number.POSITIVE_INFINITY,
+      enemyAttackCounter: 2,
+      enemyAttackInterval: 3,
+      wave: 7,
+      isEndlessWave: true,
+    },
+    pieces: createPieces(),
+    selected: null,
+    message: "选择两个相邻棋子交换。",
+    lastEvents: [],
+    progress: createDefaultProgress(),
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: fairySkin,
+  });
+
+  assert.equal(endlessHtml.includes("Wave 7/∞ 无尽挑战"), true);
+  assert.equal(endlessHtml.includes("∞/∞"), true);
+
+  const lostHtml = renderGameplayScene({
+    state: {
+      ...createGameplayState(),
+      phase: "lost",
+      score: 880,
+      playerHp: 0,
+    },
+    pieces: createPieces(),
+    selected: null,
+    message: "失败。",
+    lastEvents: [],
+    progress: createDefaultProgress(),
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: fairySkin,
+  });
+
+  assert.equal(lostHtml.includes("失败"), true);
+  assert.equal(lostHtml.includes("本局分数 0"), true);
+  assert.equal(lostHtml.includes("本局分数 880"), false);
 });
 
 test("board reshuffle event renders the short gameplay feedback", () => {

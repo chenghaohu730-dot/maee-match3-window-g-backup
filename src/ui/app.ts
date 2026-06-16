@@ -70,6 +70,7 @@ export function mountGameApp(root: HTMLDivElement): void {
   let particleLayer: ParticleLayerMount | null = null;
   let activeSkillVfxCleanup: (() => void) | null = null;
   let activeBoardResolvePromise: Promise<void> | null = null;
+  let showTurnFeedback = false;
   const boardLock = new BoardInteractionLock();
   const presentationDirector = new PresentationDirector({
     onTimelineStart: () => {
@@ -125,6 +126,7 @@ export function mountGameApp(root: HTMLDivElement): void {
         soundEnabled,
         vibrationEnabled,
         skin: activeGameplaySkin,
+        showTurnFeedback,
       });
     }
 
@@ -205,6 +207,7 @@ export function mountGameApp(root: HTMLDivElement): void {
         scene = "universe";
         modal = null;
         selected = null;
+        showTurnFeedback = false;
         message = "选择一个宇宙开始挑战。";
         render();
       });
@@ -223,6 +226,7 @@ export function mountGameApp(root: HTMLDivElement): void {
             controller.startGame();
             lastCommittedScore = 0;
             selected = null;
+            showTurnFeedback = false;
             message = "选择两个相邻棋子交换。";
           }
 
@@ -237,6 +241,7 @@ export function mountGameApp(root: HTMLDivElement): void {
         controller.restartGame();
         lastCommittedScore = 0;
         selected = null;
+        showTurnFeedback = false;
         message = "选择两个相邻棋子交换。";
         render();
       },
@@ -397,6 +402,7 @@ export function mountGameApp(root: HTMLDivElement): void {
 
     if (selected?.x === x && selected.y === y) {
       selected = null;
+      showTurnFeedback = false;
       message = "已取消选择。";
       render();
       return;
@@ -404,6 +410,7 @@ export function mountGameApp(root: HTMLDivElement): void {
 
     if (!selected) {
       selected = { x, y };
+      showTurnFeedback = false;
       message = `已选择 ${x + 1},${y + 1}。`;
       render();
       return;
@@ -440,6 +447,7 @@ export function mountGameApp(root: HTMLDivElement): void {
       }
 
       commitScoreProgress();
+      showTurnFeedback = true;
       await presentationDirector.playTurnPresentation({
         summary: {
           totalCleared: result.clearEvents.reduce(
@@ -459,6 +467,7 @@ export function mountGameApp(root: HTMLDivElement): void {
       });
     } finally {
       boardLock.endAnimation();
+      showTurnFeedback = false;
       render();
     }
   }

@@ -154,7 +154,7 @@ test("applies armor break to increase enemy damage taken", () => {
   assert.equal(state.armorBreak, null);
 });
 
-test("sets status to won after the boss is defeated", () => {
+test("starts endless challenge after the default boss is defeated", () => {
   const combat = new CombatSystem();
 
   for (let index = 0; index < 5; index++) {
@@ -162,6 +162,23 @@ test("sets status to won after the boss is defeated", () => {
   }
 
   const events = combat.applyPlayerMoveResult({ totalCleared: 150 });
+  const state = combat.getState();
+
+  assert.equal(state.status, "playing");
+  assert.equal(state.wave, 7);
+  assert.equal(state.enemy?.id, "endless-challenge");
+  assert.equal(state.enemy?.name, "无尽挑战");
+  assert.equal(state.enemy?.hp, Number.POSITIVE_INFINITY);
+  assert.equal(state.enemy?.attackInterval, 3);
+  assert.equal(state.enemy?.damage, 18);
+  assert.equal(hasEvent(events, "waveStarted"), true);
+  assert.equal(hasEvent(events, "gameWon"), false);
+});
+
+test("sets status to won after the last finite wave is defeated", () => {
+  const combat = new CombatSystem([wave("boss", 6, 0, 0)]);
+
+  const events = combat.applyPlayerMoveResult({ totalCleared: 3 });
   const state = combat.getState();
 
   assert.equal(state.status, "won");

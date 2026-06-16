@@ -12,6 +12,7 @@ import {
 } from "../src/skins/skinTypes.ts";
 import { createDefaultProgress } from "../src/ui/progressionStore.ts";
 import { renderGameplayScene } from "../src/ui/gameplayView.ts";
+import type { EnemyAnimationState } from "../src/ui/characterAnimationTypes.ts";
 
 const FAIRY_MVP_ASSETS = [
   ["piece_red_flame", "/assets/fairy/pieces/piece_red_flame.png"],
@@ -66,11 +67,19 @@ const FORMAL_YIZAI_HERO_KEYS = [
   "yizai_hero_hurt",
 ] as const satisfies readonly AssetKey[];
 
+const FORMAL_MONSTER_SLIME_KEYS = [
+  "monster_slime_idle",
+  "monster_slime_hit",
+  "monster_slime_attack",
+  "monster_slime_defeat",
+] as const satisfies readonly AssetKey[];
+
 const FORMAL_READY_KEYS = [
   ...FORMAL_PIECE_KEYS,
   ...FORMAL_BOARD_KEYS,
   ...FORMAL_BACKGROUND_KEYS,
   ...FORMAL_YIZAI_HERO_KEYS,
+  ...FORMAL_MONSTER_SLIME_KEYS,
 ] as const satisfies readonly AssetKey[];
 
 test("fairySkin has paths for every first-batch fairy MVP asset", () => {
@@ -189,6 +198,40 @@ test("formal yizai hero fallback images render by default", () => {
     true,
   );
   assert.equal(html.includes("data-fallback-key=\"yizai_hero_idle\""), true);
+});
+
+test("formal forest slime fallback images render for every enemy state", () => {
+  const expectedByState = {
+    idle: "monster_slime_idle",
+    hit: "monster_slime_hit",
+    attack: "monster_slime_attack",
+    defeat: "monster_slime_defeat",
+  } as const satisfies Record<EnemyAnimationState, AssetKey>;
+
+  for (const key of FORMAL_MONSTER_SLIME_KEYS) {
+    const resource = fairySkin.resources[key];
+
+    assert.equal(resource.available, true);
+    assert.equal(hasImageResource(resource), true);
+  }
+
+  for (const [state, key] of Object.entries(expectedByState) as [
+    EnemyAnimationState,
+    AssetKey,
+  ][]) {
+    const resource = fairySkin.resources[key];
+    const html = renderGameplayScene({
+      ...createGameplayModel(fairySkin),
+      characterAnimations: {
+        yizai: "idle",
+        enemy: state,
+      },
+    });
+
+    assert.equal(html.includes(`data-animation-state="${state}"`), true);
+    assert.equal(html.includes(`data-fallback-key="${key}"`), true);
+    assert.equal(html.includes(`url('${resource.path}')`), true);
+  }
 });
 
 test("missing remaining first-batch fairy MVP images stay on fallback", () => {

@@ -6,6 +6,7 @@ export interface EnemyWave {
   hp: number;
   attackInterval: number;
   damage: number;
+  endless?: boolean;
 }
 
 export interface PlayerState {
@@ -22,6 +23,7 @@ export interface EnemyState {
   attackInterval: number;
   attackCounter: number;
   damage: number;
+  endless?: boolean;
 }
 
 export type CombatStatus = "playing" | "won" | "lost";

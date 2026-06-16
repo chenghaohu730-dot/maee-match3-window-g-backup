@@ -262,6 +262,11 @@ export class CombatSystem {
       attackCounter: 0,
       damage: wave.damage,
     };
+
+    if (wave.endless) {
+      this.enemy.endless = true;
+    }
+
     this.clearEnemyEffects();
   }
 
@@ -280,13 +285,19 @@ function createInitialPlayer(): PlayerState {
 }
 
 function cloneWave(wave: EnemyWave): EnemyWave {
-  return {
+  const clone: EnemyWave = {
     id: wave.id,
     name: wave.name,
     hp: wave.hp,
     attackInterval: wave.attackInterval,
     damage: wave.damage,
   };
+
+  if (wave.endless) {
+    clone.endless = true;
+  }
+
+  return clone;
 }
 
 function sanitizeAmount(amount: number): number {

@@ -42,6 +42,7 @@ export interface GameplayViewModel {
   vibrationEnabled: boolean;
   skin: Match3Skin;
   characterAnimations?: CharacterAnimationSnapshot;
+  showTurnFeedback?: boolean;
 }
 
 export interface StartSceneViewModel {
@@ -148,6 +149,7 @@ export function renderUniverseScene(model: UniverseSceneViewModel): string {
 export function renderGameplayScene(model: GameplayViewModel): string {
   const { state } = model;
   const { skin } = model;
+  const showTurnFeedback = model.showTurnFeedback ?? true;
 
   return renderPhoneFrame(
     skin,
@@ -157,7 +159,7 @@ export function renderGameplayScene(model: GameplayViewModel): string {
         "ft_gameplay_bg",
       )}" ${assetAttrs(skin, "ft_gameplay_bg")}>
         <header class="game-hud">
-          <strong>Wave ${state.wave}/${state.totalWaves}</strong>
+          <strong>${formatWaveLabel(state)}</strong>
           <span>Score ${state.score}</span>
           <button class="icon-button" type="button" aria-label="暂停">Ⅱ</button>
         </header>
@@ -165,7 +167,9 @@ export function renderGameplayScene(model: GameplayViewModel): string {
         ${renderBattleStage(model)}
 
         <section class="board-zone">
-          <div class="board-stage ${getShakeClass(state)} ${assetClasses(
+          <div class="board-stage ${
+            showTurnFeedback ? getShakeClass(state) : ""
+          } ${assetClasses(
             skin,
             "ft_board_frame",
           )}" ${assetAttrs(skin, "ft_board_frame")}>
@@ -179,13 +183,17 @@ export function renderGameplayScene(model: GameplayViewModel): string {
                 )
                 .join("")}
             </div>
-            ${renderBoardFeedback(state, model.lastEvents)}
-            ${renderVfxFallbacks(state, skin)}
+            ${renderBoardFeedback(
+              state,
+              model.lastEvents,
+              showTurnFeedback,
+            )}
+            ${showTurnFeedback ? renderVfxFallbacks(state, skin) : ""}
           </div>
         </section>
 
         <footer class="bottom-status">
-          <div class="bottom-score">当前积分 ${model.progress.totalPoints}</div>
+          <div class="bottom-score">最高分 ${model.progress.highestScore}</div>
           <button class="secondary-button compact" type="button" data-action="return-universe">返回宇宙</button>
         </footer>
       </div>
@@ -226,16 +234,18 @@ function renderUniverseCard(
 
 function renderBattleStage(model: GameplayViewModel): string {
   const { state, skin } = model;
+  const showTurnFeedback = model.showTurnFeedback ?? true;
+  const feedbackEvents = showTurnFeedback ? model.lastEvents : [];
   const characterAnimations =
     model.characterAnimations ??
-    createCharacterAnimationSnapshot(state, model.lastEvents);
+    createCharacterAnimationSnapshot(state, feedbackEvents);
   const playerState = characterAnimations.yizai;
   const enemyState = characterAnimations.enemy;
 
   return `
-    <section class="battle-stage battle-zone ${getShakeClass(
-      state,
-    )}" aria-label="battle stage">
+    <section class="battle-stage battle-zone ${
+      showTurnFeedback ? getShakeClass(state) : ""
+    }" aria-label="battle stage">
       <div class="battle-bg ${assetClasses(
         skin,
         "ft_battle_stage_bg",
@@ -246,14 +256,16 @@ function renderBattleStage(model: GameplayViewModel): string {
         </div>
         <div class="stage-vfx-lane">
           <div class="versus-mark">VS</div>
-          <div class="stage-hit-flash ${getShakeClass(state)}"></div>
+          <div class="stage-hit-flash ${
+            showTurnFeedback ? getShakeClass(state) : ""
+          }"></div>
         </div>
         <div class="enemy-slot ${enemyStateClass(enemyState)}">
           ${renderEnemyCharacter(skin, state, enemyState)}
         </div>
       </div>
       <div class="battle-vfx-layer" aria-hidden="true">
-        ${renderBattleVfxFallback(state)}
+        ${showTurnFeedback ? renderBattleVfxFallback(state) : ""}
       </div>
       <div class="battle-hud-layer combat-info-panel" aria-label="combat info">
         ${renderBattleHpPanel(
@@ -277,7 +289,11 @@ function renderBattleStage(model: GameplayViewModel): string {
           state.enemyAttackInterval,
         )}
       </div>
-      ${renderDamageFloatLayer(state, model.lastEvents)}
+      ${
+        showTurnFeedback
+          ? renderDamageFloatLayer(state, feedbackEvents)
+          : `<div class="damage-float-layer"></div>`
+      }
     </section>
   `;
 }
@@ -508,6 +524,14 @@ function getLastCombatAmount(
   return 0;
 }
 
+function formatWaveLabel(state: GameplayState): string {
+  if (state.isEndlessWave) {
+    return `Wave ${state.wave}/∞ 无尽挑战`;
+  }
+
+  return `Wave ${state.wave}/${state.totalWaves}`;
+}
+
 function renderBoardCell(
   piece: Piece | null,
   index: number,
@@ -614,6 +638,7 @@ function renderResultPanel(state: GameplayState, skin: Match3Skin): string {
   }
 
   const title = state.phase === "won" ? "胜利" : "失败";
+  const score = state.phase === "lost" ? 0 : state.score;
 
   return `
     <section class="result-panel" aria-label="result">
@@ -622,7 +647,7 @@ function renderResultPanel(state: GameplayState, skin: Match3Skin): string {
         "modal_common",
       )}" ${assetAttrs(skin, "modal_common")}>
         <h2>${title}</h2>
-        <p>本局分数 ${state.score}</p>
+        <p>本局分数 ${score}</p>
         <button class="primary-button restart-button" type="button">再来一局</button>
         <button class="secondary-button compact" type="button" data-action="return-universe">返回宇宙</button>
       </div>
@@ -633,7 +658,12 @@ function renderResultPanel(state: GameplayState, skin: Match3Skin): string {
 function renderBoardFeedback(
   state: GameplayState,
   events: readonly GameplayEvent[],
+  showTurnFeedback = true,
 ): string {
+  if (!showTurnFeedback) {
+    return `<div class="board-feedback"></div>`;
+  }
+
   const skillText = getSkillDisplayText(
     state.lastVfxKeys,
     state.lastSkillText,
@@ -700,6 +730,10 @@ function getShakeClass(state: GameplayState): string {
 }
 
 function formatNumber(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "∞";
+  }
+
   return Number.isInteger(value)
     ? String(value)
     : value.toFixed(1).replace(/\.0$/, "");
@@ -865,6 +899,7 @@ function getEnemyDisplayName(enemyId: string): string {
     "thorn-treant": "荆棘树精",
     "wolf-soldier": "狼兵",
     "young-black-dragon-king": "黑龙幼王",
+    "endless-challenge": "无尽挑战",
   };
 
   return names[enemyId] ?? enemyId;
@@ -888,6 +923,10 @@ function getBattleVfxKey(keys: readonly string[]): string | undefined {
 }
 
 function getPercent(current: number, max: number): number {
+  if (!Number.isFinite(max)) {
+    return current > 0 ? 100 : 0;
+  }
+
   if (max <= 0) {
     return 0;
   }

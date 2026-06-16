@@ -40,7 +40,10 @@ export class GameplayController {
 
     this.rng = options.rng;
     this.initialTypes = options.initialTypes;
-    this.totalWaves = waves.length;
+    this.totalWaves = Math.max(
+      1,
+      waves.filter((wave) => wave.endless !== true).length,
+    );
     this.combat = new CombatSystem(waves);
     this.skills = new SkillSystem();
     this.board = this.createBoard();
@@ -181,6 +184,10 @@ export class GameplayController {
       lastComboCount: this.lastComboCount,
       lastVfxKeys: [...this.lastVfxKeys],
     };
+
+    if (enemy?.endless) {
+      state.isEndlessWave = true;
+    }
 
     if (this.lastSkillText) {
       state.lastSkillText = this.lastSkillText;

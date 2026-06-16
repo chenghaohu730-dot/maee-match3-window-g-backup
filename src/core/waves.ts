@@ -1,5 +1,8 @@
 import type { EnemyWave } from "./combatTypes.ts";
 
+const HARDEST_ATTACK_INTERVAL = 3;
+const HARDEST_DAMAGE = 18;
+
 export const FAIRY_TALE_WAVES: EnemyWave[] = [
   {
     id: "forest-slime",
@@ -40,7 +43,15 @@ export const FAIRY_TALE_WAVES: EnemyWave[] = [
     id: "young-black-dragon-king",
     name: "黑龙幼王",
     hp: 300,
-    attackInterval: 3,
-    damage: 18,
+    attackInterval: HARDEST_ATTACK_INTERVAL,
+    damage: HARDEST_DAMAGE,
+  },
+  {
+    id: "endless-challenge",
+    name: "无尽挑战",
+    hp: Number.POSITIVE_INFINITY,
+    attackInterval: HARDEST_ATTACK_INTERVAL,
+    damage: HARDEST_DAMAGE,
+    endless: true,
   },
 ];
