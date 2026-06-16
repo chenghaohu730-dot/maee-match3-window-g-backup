@@ -3,7 +3,7 @@ import type { CombatEvent } from "../core/combatTypes.ts";
 import type { GameplayEvent, GameplayState } from "../core/gameplayTypes.ts";
 import type { SkillResolveResult } from "../core/skillTypes.ts";
 import type { VfxEvent } from "../core/vfxTypes.ts";
-import type { BoardAnimationPlan } from "./boardAnimationPlan.ts";
+import type { BoardAnimationSequence } from "./boardAnimationPlan.ts";
 import type { CharacterAnimationRuntimeEvent } from "./characterAnimationTypes.ts";
 
 export type CombatTimelineKind =
@@ -65,7 +65,7 @@ export interface CombatTimeline {
 export interface BoardSwapPresentation {
   from: MatchCell;
   to: MatchCell;
-  plan: BoardAnimationPlan;
+  sequence: BoardAnimationSequence;
 }
 
 export interface TurnPresentationInput {

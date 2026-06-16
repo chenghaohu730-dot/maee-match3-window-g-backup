@@ -1,6 +1,7 @@
 import type {
   BoardPieceSnapshot,
   MatchCell,
+  Piece,
   SwapResult,
 } from "../core/board.ts";
 import { GameplayController } from "../core/gameplayController.ts";
@@ -12,8 +13,9 @@ import {
   getDropDuration,
 } from "./animationConfig.ts";
 import {
-  createBoardAnimationPlan,
-  type BoardAnimationPlan,
+  createBoardAnimationSequence,
+  type BoardAnimationSequence,
+  type BoardAnimationStepPlan,
 } from "./boardAnimationPlan.ts";
 import { BoardInteractionLock } from "./boardInteractionLock.ts";
 import {
@@ -30,6 +32,7 @@ import {
   type SceneName,
 } from "./sceneState.ts";
 import {
+  renderBoardCells,
   renderGameplayScene,
   renderStartScene,
   renderUniverseScene,
@@ -287,7 +290,8 @@ export function mountGameApp(root: HTMLDivElement): void {
               root,
               input.boardSwap.from,
               input.boardSwap.to,
-              input.boardSwap.plan,
+              input.boardSwap.sequence,
+              activeGameplaySkin,
             )
           : Promise.resolve();
         break;
@@ -347,9 +351,6 @@ export function mountGameApp(root: HTMLDivElement): void {
       case "board.settle":
         await activeBoardResolvePromise;
         render();
-        if (input.boardSwap) {
-          await playBoardSettlementAnimation(root, input.boardSwap.plan);
-        }
         break;
       case "board.clear":
       case "board.skillEffect":
@@ -426,16 +427,7 @@ export function mountGameApp(root: HTMLDivElement): void {
     selected = null;
 
     try {
-      const beforeSnapshot = controller.board.getSnapshot();
       const result = controller.board.swap(from, to);
-      const afterSnapshot = controller.board.getSnapshot();
-      const visualStartSnapshot = result.success
-        ? createPostSwapSnapshot(beforeSnapshot, from, to)
-        : beforeSnapshot;
-      const plan = createBoardAnimationPlan(visualStartSnapshot, afterSnapshot, {
-        clearEvents: result.clearEvents,
-        chainCount: result.clearEvents.length,
-      });
 
       message = formatSwapMessage(result, controller);
 
@@ -447,6 +439,10 @@ export function mountGameApp(root: HTMLDivElement): void {
       }
 
       commitScoreProgress();
+      const turnState = controller.getState();
+      const sequence = createBoardAnimationSequence(result.animationSteps, {
+        chainCount: turnState.lastComboCount || result.clearEvents.length,
+      });
       showTurnFeedback = true;
       await presentationDirector.playTurnPresentation({
         summary: {
@@ -463,8 +459,8 @@ export function mountGameApp(root: HTMLDivElement): void {
         gameplayEvents: controller.lastEvents,
         clearEvents: result.clearEvents,
         chainCount: result.clearEvents.length,
-        state: controller.getState(),
-        boardSwap: { from, to, plan },
+        state: turnState,
+        boardSwap: { from, to, sequence },
       });
     } finally {
       boardLock.endAnimation();
@@ -680,14 +676,26 @@ async function playSuccessfulSwapAnimation(
   root: HTMLDivElement,
   from: MatchCell,
   to: MatchCell,
-  plan: BoardAnimationPlan,
+  sequence: BoardAnimationSequence,
+  skin: Match3Skin,
 ): Promise<void> {
   await animateSwapTo(root, from, to, BOARD_ANIMATION_CONFIG.validSwapMs);
-  showComboText(root, plan.comboText);
-  await animateClearingPieces(root, plan.removedPieces);
 
-  if (plan.chainCount > 1) {
-    await delay(BOARD_ANIMATION_CONFIG.chainGapMs);
+  for (let index = 0; index < sequence.steps.length; index++) {
+    const step = sequence.steps[index]!;
+
+    showComboText(root, step.comboText);
+
+    if (step.removedPieces.length > 0) {
+      await animateClearingPieces(root, step.removedPieces);
+    }
+
+    renderBoardSnapshot(root, step.afterSnapshot, skin);
+    await playBoardSettlementAnimation(root, step);
+
+    if (index < sequence.steps.length - 1) {
+      await delay(BOARD_ANIMATION_CONFIG.chainGapMs);
+    }
   }
 }
 
@@ -800,7 +808,7 @@ async function animateClearingPieces(
 
 async function playBoardSettlementAnimation(
   root: HTMLDivElement,
-  plan: BoardAnimationPlan,
+  plan: BoardAnimationStepPlan,
 ): Promise<void> {
   const metrics = getBoardMetrics(root);
   const animations: {
@@ -886,22 +894,42 @@ function showComboText(root: HTMLDivElement, comboText: string | undefined): voi
   stage.append(combo);
 }
 
-function createPostSwapSnapshot(
+function renderBoardSnapshot(
+  root: HTMLDivElement,
   snapshot: readonly BoardPieceSnapshot[],
-  from: MatchCell,
-  to: MatchCell,
-): BoardPieceSnapshot[] {
-  return snapshot.map((piece) => {
-    if (piece.col === from.x && piece.row === from.y) {
-      return { ...piece, row: to.y, col: to.x };
+  skin: Match3Skin,
+): void {
+  const board = root.querySelector<HTMLElement>(".board");
+
+  if (!board) {
+    return;
+  }
+
+  board.innerHTML = renderBoardCells(snapshotToPieces(snapshot), null, skin);
+}
+
+function snapshotToPieces(
+  snapshot: readonly BoardPieceSnapshot[],
+): (Piece | null)[] {
+  const pieces = Array<Piece | null>(64).fill(null);
+
+  for (const snapshotPiece of snapshot) {
+    const index = snapshotPiece.row * 8 + snapshotPiece.col;
+
+    if (index < 0 || index >= pieces.length) {
+      continue;
     }
 
-    if (piece.col === to.x && piece.row === to.y) {
-      return { ...piece, row: from.y, col: from.x };
-    }
+    pieces[index] = {
+      id: snapshotPiece.id,
+      type: snapshotPiece.type,
+      x: snapshotPiece.col,
+      y: snapshotPiece.row,
+      isMatched: false,
+    };
+  }
 
-    return piece;
-  });
+  return pieces;
 }
 
 function areAdjacent(a: MatchCell, b: MatchCell): boolean {

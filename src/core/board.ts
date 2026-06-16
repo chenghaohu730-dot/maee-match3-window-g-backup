@@ -23,6 +23,13 @@ export interface ClearEvent {
   chain: number;
 }
 
+export interface ResolveAnimationStep {
+  kind: "clear" | "reshuffle";
+  clearEvent: ClearEvent;
+  beforeSnapshot: BoardPieceSnapshot[];
+  afterSnapshot: BoardPieceSnapshot[];
+}
+
 export interface MatchCell {
   x: number;
   y: number;
@@ -38,6 +45,7 @@ export interface MatchGroup {
 export interface SwapResult {
   success: boolean;
   clearEvents: ClearEvent[];
+  animationSteps: ResolveAnimationStep[];
   totalDamage: number;
   reason?: "not-adjacent" | "out-of-bounds" | "empty-cell" | "no-match";
 }
@@ -87,6 +95,8 @@ export class Board {
   private readonly onClear: ((event: ClearEvent) => void) | undefined;
   private readonly onResolveComplete: ((summary: ResolveSummary) => void) | undefined;
   private nextId = 1;
+  private lastResolveAnimationSteps: ResolveAnimationStep[] = [];
+  private notifyingResolveComplete = false;
 
   constructor(options: BoardOptions = {}) {
     this.rng = options.rng ?? Math.random;
@@ -101,6 +111,8 @@ export class Board {
   }
 
   swap(a: Coord, b: Coord): SwapResult {
+    this.lastResolveAnimationSteps = [];
+
     if (!this.isInBounds(a) || !this.isInBounds(b)) {
       return this.failedSwap("out-of-bounds");
     }
@@ -124,29 +136,39 @@ export class Board {
     return {
       success: true,
       clearEvents,
+      animationSteps: this.getLastResolveAnimationSteps(),
       totalDamage: clearEvents.reduce((sum, event) => sum + event.damage, 0),
     };
   }
 
   resolve(wasPlayerMove = false): ClearEvent[] {
+    this.lastResolveAnimationSteps = [];
+
     const result = this.resolveMatches(wasPlayerMove);
-    const boardWasReshuffled = this.ensurePlayableBoard();
+    const boardWasReshuffled = this.ensurePlayableBoardWithAnimation(
+      getLastChain(result.clearEvents),
+    );
     const summary = boardWasReshuffled
       ? { ...result.summary, boardWasReshuffled: true }
       : result.summary;
 
-    this.onResolveComplete?.(summary);
+    this.notifyResolveComplete(summary);
     return result.clearEvents;
   }
 
   applyBoardEffects(requests: BoardEffectRequest[]): ResolveSummary {
+    if (!this.notifyingResolveComplete) {
+      this.lastResolveAnimationSteps = [];
+    }
+
     const effectCells = this.collectBoardEffectCells(requests);
+    const beforeSnapshot = this.getSnapshot();
     const effectPieces = this.clearCells(effectCells);
 
     const clearEvents: ClearEvent[] = [];
 
     if (effectPieces.length === 0) {
-      const boardWasReshuffled = this.ensurePlayableBoard();
+      const boardWasReshuffled = this.ensurePlayableBoardWithAnimation(1);
       return this.createResolveSummary(
         clearEvents,
         false,
@@ -165,10 +187,18 @@ export class Board {
 
     this.applyGravity();
     this.refill();
+    this.recordResolveAnimationStep({
+      kind: "clear",
+      clearEvent: effectEvent,
+      beforeSnapshot,
+      afterSnapshot: this.getSnapshot(),
+    });
 
     const cascadeResult = this.resolveMatches(false, 2);
     clearEvents.push(...cascadeResult.clearEvents);
-    const boardWasReshuffled = this.ensurePlayableBoard();
+    const boardWasReshuffled = this.ensurePlayableBoardWithAnimation(
+      getLastChain(clearEvents),
+    );
 
     return this.createResolveSummary(
       clearEvents,
@@ -267,12 +297,19 @@ export class Board {
         damage: matches.length * 2,
         chain: startChain + index,
       };
+      const beforeSnapshot = this.getSnapshot();
 
       clearEvents.push(event);
       this.onClear?.(event);
       this.clearMatched();
       this.applyGravity();
       this.refill();
+      this.recordResolveAnimationStep({
+        kind: "clear",
+        clearEvent: event,
+        beforeSnapshot,
+        afterSnapshot: this.getSnapshot(),
+      });
     }
 
     throw new Error("Board resolve exceeded 64 chains.");
@@ -418,6 +455,10 @@ export class Board {
     }
 
     return snapshot;
+  }
+
+  getLastResolveAnimationSteps(): ResolveAnimationStep[] {
+    return this.lastResolveAnimationSteps.map(cloneResolveAnimationStep);
   }
 
   toTypes(): (PieceType | null)[][] {
@@ -567,6 +608,40 @@ export class Board {
     }
 
     return summary;
+  }
+
+  private ensurePlayableBoardWithAnimation(chain: number): boolean {
+    const beforeSnapshot = this.getSnapshot();
+    const boardWasReshuffled = this.ensurePlayableBoard();
+
+    if (boardWasReshuffled) {
+      this.recordResolveAnimationStep({
+        kind: "reshuffle",
+        clearEvent: {
+          pieces: [],
+          damage: 0,
+          chain,
+        },
+        beforeSnapshot,
+        afterSnapshot: this.getSnapshot(),
+      });
+    }
+
+    return boardWasReshuffled;
+  }
+
+  private recordResolveAnimationStep(step: ResolveAnimationStep): void {
+    this.lastResolveAnimationSteps.push(cloneResolveAnimationStep(step));
+  }
+
+  private notifyResolveComplete(summary: ResolveSummary): void {
+    this.notifyingResolveComplete = true;
+
+    try {
+      this.onResolveComplete?.(summary);
+    } finally {
+      this.notifyingResolveComplete = false;
+    }
   }
 
   private createInitialGrid(): (Piece | null)[][] {
@@ -844,6 +919,7 @@ export class Board {
     return {
       success: false,
       clearEvents: [],
+      animationSteps: [],
       totalDamage: 0,
       reason,
     };
@@ -858,6 +934,40 @@ function clonePiece(piece: Piece): Piece {
     y: piece.y,
     isMatched: piece.isMatched,
   };
+}
+
+function cloneClearEvent(event: ClearEvent): ClearEvent {
+  return {
+    pieces: event.pieces.map(clonePiece),
+    damage: event.damage,
+    chain: event.chain,
+  };
+}
+
+function cloneSnapshot(
+  snapshot: readonly BoardPieceSnapshot[],
+): BoardPieceSnapshot[] {
+  return snapshot.map((piece) => ({
+    id: piece.id,
+    type: piece.type,
+    row: piece.row,
+    col: piece.col,
+  }));
+}
+
+function cloneResolveAnimationStep(
+  step: ResolveAnimationStep,
+): ResolveAnimationStep {
+  return {
+    kind: step.kind,
+    clearEvent: cloneClearEvent(step.clearEvent),
+    beforeSnapshot: cloneSnapshot(step.beforeSnapshot),
+    afterSnapshot: cloneSnapshot(step.afterSnapshot),
+  };
+}
+
+function getLastChain(clearEvents: readonly ClearEvent[]): number {
+  return Math.max(1, clearEvents.at(-1)?.chain ?? 1);
 }
 
 function cloneMatchGroup(group: MatchGroup): MatchGroup {

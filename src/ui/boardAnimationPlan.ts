@@ -1,4 +1,7 @@
-import type { BoardPieceSnapshot } from "../core/board.ts";
+import type {
+  BoardPieceSnapshot,
+  ResolveAnimationStep,
+} from "../core/board.ts";
 
 export interface BoardAnimationResolveContext {
   chainCount?: number;
@@ -28,6 +31,62 @@ export interface BoardAnimationPlan {
   spawnedPieces: SpawnedPieceAnimation[];
   chainCount: number;
   comboText?: string;
+}
+
+export interface BoardAnimationStepPlan extends BoardAnimationPlan {
+  kind: ResolveAnimationStep["kind"];
+  beforeSnapshot: BoardPieceSnapshot[];
+  afterSnapshot: BoardPieceSnapshot[];
+  chainIndex: number;
+}
+
+export interface BoardAnimationSequence {
+  steps: BoardAnimationStepPlan[];
+  chainCount: number;
+  comboText?: string;
+}
+
+export function createBoardAnimationSequence(
+  resolveSteps: readonly ResolveAnimationStep[],
+  resolveContext: BoardAnimationResolveContext = {},
+): BoardAnimationSequence {
+  let clearStepCount = 0;
+  const steps = resolveSteps.map((step) => {
+    const hasClears = step.clearEvent.pieces.length > 0;
+    if (hasClears) {
+      clearStepCount++;
+    }
+
+    const chainIndex = hasClears ? clearStepCount : 0;
+    const plan = createBoardAnimationPlan(
+      step.beforeSnapshot,
+      step.afterSnapshot,
+      {
+        clearEvents: hasClears ? [step.clearEvent] : [],
+        chainCount: chainIndex,
+      },
+    );
+
+    return {
+      ...plan,
+      kind: step.kind,
+      beforeSnapshot: cloneSnapshot(step.beforeSnapshot),
+      afterSnapshot: cloneSnapshot(step.afterSnapshot),
+      chainIndex,
+    };
+  });
+  const chainCount = resolveContext.chainCount ?? clearStepCount;
+  const comboText = getComboText(chainCount);
+  const sequence: BoardAnimationSequence = {
+    steps,
+    chainCount,
+  };
+
+  if (comboText) {
+    sequence.comboText = comboText;
+  }
+
+  return sequence;
 }
 
 export function createBoardAnimationPlan(
@@ -127,4 +186,15 @@ function mapSnapshotById(
   snapshot: readonly BoardPieceSnapshot[],
 ): Map<string, BoardPieceSnapshot> {
   return new Map(snapshot.map((piece) => [piece.id, piece]));
+}
+
+function cloneSnapshot(
+  snapshot: readonly BoardPieceSnapshot[],
+): BoardPieceSnapshot[] {
+  return snapshot.map((piece) => ({
+    id: piece.id,
+    type: piece.type,
+    row: piece.row,
+    col: piece.col,
+  }));
 }

@@ -334,6 +334,35 @@ test("resolves chain reactions until the board is stable", () => {
   assert.equal(board.detectMatches().length, 0);
 });
 
+test("records per-chain animation snapshots during resolution", () => {
+  const types: PieceType[][] = [
+    [0, 1, 2, 3, 4, 5, 0, 1],
+    [1, 2, 3, 4, 5, 0, 1, 2],
+    [2, 3, 4, 5, 0, 1, 2, 3],
+    [3, 4, 5, 0, 1, 2, 3, 4],
+    [2, 5, 0, 1, 2, 3, 4, 5],
+    [2, 0, 1, 2, 3, 4, 5, 0],
+    [3, 3, 3, 0, 4, 5, 0, 1],
+    [2, 2, 4, 1, 5, 0, 1, 2],
+  ];
+  const board = new Board({ initialTypes: types, rng: fixedRng(0.41) });
+
+  const events = board.resolve();
+  const clearSteps = board
+    .getLastResolveAnimationSteps()
+    .filter((step) => step.kind === "clear");
+
+  assert.equal(clearSteps.length, events.length);
+  assert.deepEqual(
+    clearSteps.slice(0, 2).map((step) => step.clearEvent.chain),
+    [1, 2],
+  );
+  assert.equal(clearSteps[0]?.beforeSnapshot.length, 64);
+  assert.equal(clearSteps[0]?.afterSnapshot.length, 64);
+  assert.equal(clearSteps[1]?.beforeSnapshot.length, 64);
+  assert.equal(clearSteps[1]?.afterSnapshot.length, 64);
+});
+
 function fixedRng(value: number): () => number {
   return () => value;
 }

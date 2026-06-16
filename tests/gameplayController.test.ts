@@ -27,6 +27,17 @@ const playableTypes: PieceType[][] = [
   [1, 2, 3, 4, 5, 0, 1, 2],
 ];
 
+const redSkillSwapTypes: PieceType[][] = [
+  [0, 0, 1, 0, 4, 5, 0, 1],
+  [1, 2, 0, 4, 5, 0, 1, 2],
+  [2, 3, 4, 5, 0, 1, 2, 3],
+  [3, 4, 5, 0, 1, 2, 3, 4],
+  [4, 5, 0, 1, 2, 3, 4, 5],
+  [5, 0, 1, 2, 3, 4, 5, 0],
+  [0, 1, 2, 3, 4, 5, 0, 1],
+  [1, 2, 3, 4, 5, 0, 1, 2],
+];
+
 const deadTypes: PieceType[][] = [
   [0, 1, 2, 3, 4, 5, 0, 1],
   [1, 2, 3, 4, 5, 0, 1, 2],
@@ -192,6 +203,28 @@ test("red 4-match executes clearRow as a board effect", () => {
   assert.equal(resolved?.totalCleared >= 8, true);
   assert.equal(controller.board.hasHoles(), false);
   assert.equal(controller.board.detectMatches().length, 0);
+});
+
+test("swap animation steps include skill board-effect clears", () => {
+  const controller = new GameplayController({
+    initialTypes: redSkillSwapTypes,
+    rng: fixedRng(0.73),
+    waves: [wave("red-animation-test", 200, 0, 0)],
+  });
+  controller.startGame();
+
+  const result = controller.board.swap({ x: 2, y: 0 }, { x: 2, y: 1 });
+  const clearSteps = result.animationSteps.filter(
+    (step) => step.kind === "clear",
+  );
+
+  assert.equal(result.success, true);
+  assert.equal(result.clearEvents.length, 1);
+  assert.equal(clearSteps.length > result.clearEvents.length, true);
+  assert.equal(
+    clearSteps.some((step) => step.clearEvent.pieces.length >= 8),
+    true,
+  );
 });
 
 test("purple 4-match executes clearArea as a board effect", () => {

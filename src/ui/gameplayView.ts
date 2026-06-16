@@ -178,11 +178,7 @@ export function renderGameplayScene(model: GameplayViewModel): string {
               skin,
               "ft_board_bg",
             )}" aria-label="8 by 8 match board" ${assetAttrs(skin, "ft_board_bg")}>
-              ${model.pieces
-                .map((piece, index) =>
-                  renderBoardCell(piece, index, model.selected, skin),
-                )
-                .join("")}
+              ${renderBoardCells(model.pieces, model.selected, skin)}
             </div>
             ${renderBoardFeedback(
               state,
@@ -202,6 +198,16 @@ export function renderGameplayScene(model: GameplayViewModel): string {
       ${renderResultPanel(state, skin)}
     `,
   );
+}
+
+export function renderBoardCells(
+  pieces: readonly (Piece | null)[],
+  selected: MatchCell | null,
+  skin: Match3Skin,
+): string {
+  return pieces
+    .map((piece, index) => renderBoardCell(piece, index, selected, skin))
+    .join("");
 }
 
 function renderUniverseCard(

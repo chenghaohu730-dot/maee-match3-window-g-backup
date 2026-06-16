@@ -5,7 +5,10 @@ import { Board } from "../src/core/board.ts";
 import { GameplayController } from "../src/core/gameplayController.ts";
 import type { EnemyWave } from "../src/core/combatTypes.ts";
 import { BoardInteractionLock } from "../src/ui/boardInteractionLock.ts";
-import { createBoardAnimationPlan } from "../src/ui/boardAnimationPlan.ts";
+import {
+  createBoardAnimationPlan,
+  createBoardAnimationSequence,
+} from "../src/ui/boardAnimationPlan.ts";
 
 const stableTypes: PieceType[][] = [
   [0, 1, 2, 3, 4, 5, 0, 1],
@@ -77,6 +80,56 @@ test("createBoardAnimationPlan identifies removed pieces", () => {
   assert.deepEqual(plan.removedPieces, ["b", "c"]);
 });
 
+test("createBoardAnimationSequence keeps chained clears as separate steps", () => {
+  const firstBefore = snapshots([
+    ["a", 0, 0],
+    ["b", 0, 1],
+    ["c", 0, 2],
+    ["d", 1, 0],
+  ]);
+  const firstAfter = snapshots([
+    ["d", 2, 0],
+    ["e", 0, 0],
+    ["f", 1, 0],
+  ]);
+  const secondBefore = firstAfter;
+  const secondAfter = snapshots([
+    ["g", 0, 0],
+    ["h", 1, 0],
+    ["f", 2, 0],
+  ]);
+
+  const sequence = createBoardAnimationSequence([
+    {
+      kind: "clear",
+      clearEvent: {
+        pieces: pieces(["a", "b", "c"]),
+        damage: 6,
+        chain: 1,
+      },
+      beforeSnapshot: firstBefore,
+      afterSnapshot: firstAfter,
+    },
+    {
+      kind: "clear",
+      clearEvent: {
+        pieces: pieces(["d", "e"]),
+        damage: 4,
+        chain: 2,
+      },
+      beforeSnapshot: secondBefore,
+      afterSnapshot: secondAfter,
+    },
+  ]);
+
+  assert.equal(sequence.steps.length, 2);
+  assert.deepEqual(sequence.steps[0]?.removedPieces, ["a", "b", "c"]);
+  assert.equal(sequence.steps[0]?.comboText, undefined);
+  assert.deepEqual(sequence.steps[1]?.removedPieces, ["d", "e"]);
+  assert.equal(sequence.steps[1]?.comboText, "2 COMBO");
+  assert.equal(sequence.chainCount, 2);
+});
+
 test("invalid swap does not trigger resolve or combat progress", () => {
   let resolveCount = 0;
   const board = new Board({
@@ -132,6 +185,16 @@ function snapshots(
     row,
     col,
     type: (index % 6) as PieceType,
+  }));
+}
+
+function pieces(ids: readonly string[]) {
+  return ids.map((id, index) => ({
+    id,
+    type: (index % 6) as PieceType,
+    x: index,
+    y: 0,
+    isMatched: true,
   }));
 }
 
