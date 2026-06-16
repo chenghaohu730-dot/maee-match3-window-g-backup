@@ -1003,7 +1003,7 @@ p {
 
 .hp-fill {
   height: 100%;
-  transition: width 120ms ease;
+  transition: width var(--hp-tween-ms, 180ms) ease;
 }
 
 .hp-fill.player {
@@ -1078,7 +1078,7 @@ p {
   font-size: 18px;
   font-weight: 900;
   text-shadow: 0 1px 1px rgb(0 0 0 / 20%);
-  animation: battle-damage-float 900ms ease-out both;
+  animation: battle-damage-float var(--damage-text-ms, 600ms) ease-out both;
 }
 
 .enemy-damage {
@@ -1091,6 +1091,25 @@ p {
   left: 18%;
   color: #fff7d6;
   background: rgb(180 83 9 / 90%);
+}
+
+.timeline-notice {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  z-index: 7;
+  min-width: max-content;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #fff;
+  background: rgb(17 24 39 / 84%);
+  font-size: 15px;
+  font-weight: 900;
+  text-align: center;
+  text-shadow: 0 1px 1px rgb(0 0 0 / 24%);
+  translate: -50% -50%;
+  pointer-events: none;
+  animation: float-pop 620ms ease-out both;
 }
 
 .combat-info-panel {

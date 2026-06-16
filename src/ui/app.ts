@@ -45,6 +45,14 @@ import {
   mountCharacterAnimators,
   type CharacterAnimationMount,
 } from "./characterAnimator.ts";
+import { PresentationDirector } from "./presentationDirector.ts";
+import type {
+  CombatTimeline,
+  CombatTimelineEvent,
+  PresentationPlaybackInput,
+  TurnPresentationInput,
+} from "./combatTimelineTypes.ts";
+import { PRESENTATION_TIMING } from "./presentationTiming.ts";
 
 export function mountGameApp(root: HTMLDivElement): void {
   const controller = new GameplayController();
@@ -60,9 +68,30 @@ export function mountGameApp(root: HTMLDivElement): void {
   let activeGameplaySkin: Match3Skin = fairySkin;
   let characterAnimationMount: CharacterAnimationMount | null = null;
   let particleLayer: ParticleLayerMount | null = null;
+  let activeSkillVfxCleanup: (() => void) | null = null;
+  let activeBoardResolvePromise: Promise<void> | null = null;
   const boardLock = new BoardInteractionLock();
+  const presentationDirector = new PresentationDirector({
+    onTimelineStart: () => {
+      activeBoardResolvePromise = null;
+    },
+    onTimelineEvent: (event, timeline, input) =>
+      handlePresentationTimelineEvent(event, timeline, input),
+    onTimelineComplete: async (_timeline, input) => {
+      if (isTurnPresentationInput(input)) {
+        await activeBoardResolvePromise;
+        activeBoardResolvePromise = null;
+      }
+    },
+    onLowPriorityCancelled: () => {
+      particleLayer?.cleanup();
+      particleLayer = scene === "gameplay" ? mountParticleLayer(root) : null;
+    },
+  });
 
   function render(): void {
+    activeSkillVfxCleanup?.();
+    activeSkillVfxCleanup = null;
     particleLayer?.cleanup();
     particleLayer = null;
     characterAnimationMount?.cleanup();
@@ -236,8 +265,125 @@ export function mountGameApp(root: HTMLDivElement): void {
     });
   }
 
+  async function handlePresentationTimelineEvent(
+    event: CombatTimelineEvent,
+    _timeline: CombatTimeline,
+    input: PresentationPlaybackInput,
+  ): Promise<void> {
+    if (!isTurnPresentationInput(input)) {
+      handleNonTurnTimelineEvent(event);
+      return;
+    }
+
+    switch (event.type) {
+      case "board.swapComplete":
+        activeBoardResolvePromise = input.boardSwap
+          ? playSuccessfulSwapAnimation(
+              root,
+              input.boardSwap.from,
+              input.boardSwap.to,
+              input.boardSwap.plan,
+            )
+          : Promise.resolve();
+        break;
+      case "character.yizai.attack":
+        characterAnimationMount?.play("yizai", "attack");
+        break;
+      case "character.yizai.skill":
+        characterAnimationMount?.play("yizai", "skill");
+        break;
+      case "character.yizai.ultimate":
+        characterAnimationMount?.play("yizai", "ultimate");
+        break;
+      case "character.yizai.hurt":
+        characterAnimationMount?.play("yizai", "hurt");
+        break;
+      case "character.enemy.hit":
+        characterAnimationMount?.play("enemy", "hit");
+        break;
+      case "character.enemy.attack":
+        characterAnimationMount?.play("enemy", "attack");
+        break;
+      case "character.enemy.defeat":
+        characterAnimationMount?.play("enemy", "defeat");
+        break;
+      case "particle.basicProjectile":
+        particleLayer?.handleBattleVfxKey(
+          event.data?.source === "enemy" ? "enemy_attack_hit" : "yizai_basic_hit",
+        );
+        break;
+      case "particle.skillProjectile":
+      case "particle.ultimateAura":
+        emitCurrentBattleParticles(input);
+        break;
+      case "ui.skillText":
+        startCurrentSkillVfx(input);
+        break;
+      case "camera.shake":
+        applyTimelineShake(event);
+        break;
+      case "combat.damageNumber":
+        renderTimelineDamage(input.gameplayEvents);
+        break;
+      case "combat.enemyHpTween":
+      case "combat.playerHpTween":
+        renderTimelineHp(controller.getState());
+        break;
+      case "ui.waveCleared":
+        showTimelineNotice("Wave Cleared");
+        break;
+      case "ui.reshuffleNotice":
+        showTimelineNotice("棋盘重排");
+        break;
+      case "wave.start":
+      case "game.end":
+        render();
+        break;
+      case "board.settle":
+        await activeBoardResolvePromise;
+        render();
+        if (input.boardSwap) {
+          await playBoardSettlementAnimation(root, input.boardSwap.plan);
+        }
+        break;
+      case "board.clear":
+      case "board.skillEffect":
+      case "board.ultimateFocus":
+      case "combat.attackCounter":
+        break;
+    }
+  }
+
+  function handleNonTurnTimelineEvent(event: CombatTimelineEvent): void {
+    switch (event.type) {
+      case "character.enemy.attack":
+        characterAnimationMount?.play("enemy", "attack");
+        break;
+      case "character.yizai.hurt":
+        characterAnimationMount?.play("yizai", "hurt");
+        break;
+      case "character.enemy.defeat":
+        characterAnimationMount?.play("enemy", "defeat");
+        break;
+      case "ui.waveCleared":
+        showTimelineNotice("Wave Cleared");
+        break;
+      case "ui.reshuffleNotice":
+        showTimelineNotice("棋盘重排");
+        break;
+      default:
+        break;
+    }
+  }
+
   async function handlePieceClick(button: HTMLButtonElement): Promise<void> {
-    if (!boardLock.canUseBoard(controller.getState().phase, modal !== null)) {
+    if (
+      !boardLock.canUseBoard(
+        controller.getState().phase,
+        modal !== null,
+        presentationDirector.isBusy(),
+      )
+    ) {
       return;
     }
 
@@ -294,13 +440,23 @@ export function mountGameApp(root: HTMLDivElement): void {
       }
 
       commitScoreProgress();
-      await playSuccessfulSwapAnimation(root, from, to, plan);
-      await playSkillVfxAnimation(root, {
+      await presentationDirector.playTurnPresentation({
+        summary: {
+          totalCleared: result.clearEvents.reduce(
+            (sum, event) => sum + event.pieces.length,
+            0,
+          ),
+          chainCount: result.clearEvents.length,
+          wasPlayerMove: true,
+          boardWasReshuffled: controller.lastEvents.some(
+            (event) => event.type === "boardShuffled",
+          ),
+        },
+        gameplayEvents: controller.lastEvents,
+        chainCount: result.clearEvents.length,
         state: controller.getState(),
-        events: controller.lastEvents,
+        boardSwap: { from, to, plan },
       });
-      render();
-      await playBoardSettlementAnimation(root, plan);
     } finally {
       boardLock.endAnimation();
       render();
@@ -320,22 +476,137 @@ export function mountGameApp(root: HTMLDivElement): void {
     savePlayerProgress(progress, storage);
   }
 
+  function emitCurrentBattleParticles(input: TurnPresentationInput): void {
+    const battleParticleKey = getBattleParticleKey(
+      input.state?.lastVfxKeys ?? controller.getState().lastVfxKeys,
+    );
+
+    if (battleParticleKey) {
+      particleLayer?.handleBattleVfxKey(battleParticleKey);
+    }
+  }
+
+  function startCurrentSkillVfx(input: TurnPresentationInput): void {
+    activeSkillVfxCleanup?.();
+    activeSkillVfxCleanup = startSkillVfxAnimation(
+      root,
+      {
+        state: input.state ?? controller.getState(),
+        events: input.gameplayEvents,
+      },
+      particleLayer,
+    );
+  }
+
+  function applyTimelineShake(event: CombatTimelineEvent): void {
+    const intensity = event.data?.intensity === "large" ? "large" : "medium";
+    const className = intensity === "large" ? "shake-large" : "shake-medium";
+    const durationMs = intensity === "large" ? 520 : 360;
+    const targets = [
+      root.querySelector<HTMLElement>(".battle-zone"),
+      root.querySelector<HTMLElement>(".board-stage"),
+    ].filter((target): target is HTMLElement => target !== null);
+
+    for (const target of targets) {
+      target.classList.add(className);
+      window.setTimeout(() => target.classList.remove(className), durationMs);
+    }
+  }
+
+  function renderTimelineHp(state = controller.getState()): void {
+    updateHpPanel("enemy", state.enemyHp, state.enemyMaxHp);
+    updateHpPanel("player", state.playerHp, state.playerMaxHp);
+  }
+
+  function updateHpPanel(
+    variant: "player" | "enemy",
+    current: number,
+    max: number,
+  ): void {
+    const panel = root.querySelector<HTMLElement>(`.${variant}-hp-panel`);
+    const label = panel?.querySelector<HTMLElement>(".hp-label span:last-child");
+    const fill = panel?.querySelector<HTMLElement>(".hp-fill");
+
+    if (!panel || !fill) {
+      return;
+    }
+
+    if (label) {
+      label.textContent = `${formatNumber(current)}/${formatNumber(max)}`;
+    }
+
+    fill.style.setProperty(
+      "width",
+      `${max <= 0 ? 0 : Math.max(0, Math.min(100, (current / max) * 100))}%`,
+    );
+    fill.style.setProperty(
+      "--hp-tween-ms",
+      `${PRESENTATION_TIMING.HP_TWEEN_MS}ms`,
+    );
+  }
+
+  function renderTimelineDamage(
+    events: readonly TurnPresentationInput["gameplayEvents"][number][],
+  ): void {
+    const layer = root.querySelector<HTMLElement>(".damage-float-layer");
+
+    if (!layer) {
+      return;
+    }
+
+    const enemyDamage = controller.getState().lastDamage;
+    const playerDamage = getLatestPlayerDamage(events);
+    const parts: HTMLElement[] = [];
+
+    if (enemyDamage > 0) {
+      parts.push(
+        createDamageFloat("enemy-damage", `-${formatNumber(enemyDamage)}`),
+      );
+    }
+
+    if (playerDamage > 0) {
+      parts.push(createDamageFloat("player-damage", `-${formatNumber(playerDamage)}`));
+    }
+
+    layer.replaceChildren(...parts);
+  }
+
+  function showTimelineNotice(text: string): void {
+    const stage = root.querySelector<HTMLElement>(".battle-stage");
+
+    if (!stage) {
+      return;
+    }
+
+    const notice = document.createElement("div");
+    notice.className = "timeline-notice";
+    notice.textContent = text;
+    stage.append(notice);
+    window.setTimeout(() => notice.remove(), 620);
+  }
+
   render();
 }
 
-async function playSkillVfxAnimation(
+function isTurnPresentationInput(
+  input: PresentationPlaybackInput,
+): input is TurnPresentationInput {
+  return "summary" in input && "gameplayEvents" in input;
+}
+
+function startSkillVfxAnimation(
   root: HTMLDivElement,
   input: SkillVfxLayerInput,
-): Promise<void> {
+  particleLayer: ParticleLayerMount | null,
+): (() => void) | null {
   const mounted = mountSkillVfxLayer(root, input);
   const battleParticleKey = getBattleParticleKey(input.state.lastVfxKeys);
-  const particleLayer = battleParticleKey ? mountParticleLayer(root) : null;
   const particleResult = battleParticleKey
     ? particleLayer?.handleBattleVfxKey(battleParticleKey)
     : null;
 
   if (!mounted && !particleResult) {
-    return;
+    return null;
   }
 
   const particleDurationMs =
@@ -343,14 +614,56 @@ async function playSkillVfxAnimation(
       (max, particle) => Math.max(max, particle.durationMs),
       0,
     ) ?? 0;
-  const durationMs = Math.max(mounted?.durationMs ?? 0, particleDurationMs);
+  const durationMs = Math.min(
+    Math.max(mounted?.durationMs ?? 0, particleDurationMs),
+    PRESENTATION_TIMING.ULTIMATE_TURN_MAX_MS,
+  );
+  let cleaned = false;
+  const timer = window.setTimeout(cleanup, durationMs);
 
-  try {
-    await delay(Math.min(durationMs, 1200));
-  } finally {
+  function cleanup(): void {
+    if (cleaned) {
+      return;
+    }
+
+    cleaned = true;
+    window.clearTimeout(timer);
     mounted?.cleanup();
-    particleLayer?.cleanup();
   }
+
+  return cleanup;
+}
+
+function createDamageFloat(className: string, text: string): HTMLElement {
+  const element = document.createElement("span");
+
+  element.className = `damage-float ${className}`;
+  element.textContent = text;
+  element.style.setProperty(
+    "--damage-text-ms",
+    `${PRESENTATION_TIMING.DAMAGE_TEXT_MS}ms`,
+  );
+  return element;
+}
+
+function getLatestPlayerDamage(
+  events: readonly TurnPresentationInput["gameplayEvents"][number][],
+): number {
+  for (let index = events.length - 1; index >= 0; index--) {
+    const event = events[index];
+
+    if (event?.type === "combat" && event.event.type === "playerDamaged") {
+      return event.event.amount;
+    }
+  }
+
+  return 0;
+}
+
+function formatNumber(value: number): string {
+  return Number.isInteger(value)
+    ? String(value)
+    : value.toFixed(1).replace(/\.0$/, "");
 }
 
 async function playSuccessfulSwapAnimation(

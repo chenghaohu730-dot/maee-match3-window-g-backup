@@ -36,6 +36,7 @@ export interface CharacterAnimationMountOptions {
 
 export interface CharacterAnimationMount {
   animators: CharacterAnimator<string>[];
+  play: (characterId: CharacterId, state: string) => boolean;
   cleanup: () => void;
 }
 
@@ -48,6 +49,10 @@ export class CharacterAnimator<StateName extends string = string> {
   private startedAt = 0;
 
   constructor(private readonly options: CharacterAnimatorOptions<StateName>) {}
+
+  get characterId(): CharacterId {
+    return this.options.characterId;
+  }
 
   play(state: StateName): boolean {
     return this.playState(state, false);
@@ -284,6 +289,19 @@ export function mountCharacterAnimators(
 
   return {
     animators,
+    play: (characterId, state) => {
+      let played = false;
+
+      for (const animator of animators) {
+        if (animator.characterId !== characterId) {
+          continue;
+        }
+
+        played = animator.play(state) || played;
+      }
+
+      return played;
+    },
     cleanup: () => {
       for (const animator of animators) {
         animator.stop();

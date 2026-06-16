@@ -7,8 +7,17 @@ export class BoardInteractionLock {
     return this.animating;
   }
 
-  canUseBoard(phase: GamePhase, hasBlockingModal: boolean): boolean {
-    return phase === "playing" && !hasBlockingModal && !this.animating;
+  canUseBoard(
+    phase: GamePhase,
+    hasBlockingModal: boolean,
+    hasBlockingPresentation = false,
+  ): boolean {
+    return (
+      phase === "playing" &&
+      !hasBlockingModal &&
+      !this.animating &&
+      !hasBlockingPresentation
+    );
   }
 
   beginAnimation(): boolean {
