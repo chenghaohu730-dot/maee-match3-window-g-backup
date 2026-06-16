@@ -36,6 +36,11 @@ import {
 } from "./gameplayView.ts";
 import { mountSkillVfxLayer } from "./skillVfxLayer.ts";
 import type { SkillVfxLayerInput } from "./skillVfxTypes.ts";
+import { getBattleParticleKey } from "./particleConfig.ts";
+import {
+  mountParticleLayer,
+  type ParticleLayerMount,
+} from "./particleLayer.ts";
 import {
   mountCharacterAnimators,
   type CharacterAnimationMount,
@@ -54,9 +59,12 @@ export function mountGameApp(root: HTMLDivElement): void {
   let vibrationEnabled = true;
   let activeGameplaySkin: Match3Skin = fairySkin;
   let characterAnimationMount: CharacterAnimationMount | null = null;
+  let particleLayer: ParticleLayerMount | null = null;
   const boardLock = new BoardInteractionLock();
 
   function render(): void {
+    particleLayer?.cleanup();
+    particleLayer = null;
     characterAnimationMount?.cleanup();
     characterAnimationMount = null;
 
@@ -94,8 +102,17 @@ export function mountGameApp(root: HTMLDivElement): void {
     bindEvents();
 
     if (scene === "gameplay") {
+      particleLayer = mountParticleLayer(root);
       characterAnimationMount = mountCharacterAnimators(root, activeGameplaySkin, {
         eventTarget: root,
+        onFrameEvent: (event) => {
+          const vfxKey = getBattleParticleKey(controller.getState().lastVfxKeys);
+
+          particleLayer?.handleCharacterEvent(
+            event,
+            vfxKey ? { vfxKey } : {},
+          );
+        },
       });
     }
   }
@@ -311,15 +328,28 @@ async function playSkillVfxAnimation(
   input: SkillVfxLayerInput,
 ): Promise<void> {
   const mounted = mountSkillVfxLayer(root, input);
+  const battleParticleKey = getBattleParticleKey(input.state.lastVfxKeys);
+  const particleLayer = battleParticleKey ? mountParticleLayer(root) : null;
+  const particleResult = battleParticleKey
+    ? particleLayer?.handleBattleVfxKey(battleParticleKey)
+    : null;
 
-  if (!mounted) {
+  if (!mounted && !particleResult) {
     return;
   }
 
+  const particleDurationMs =
+    particleResult?.created.reduce(
+      (max, particle) => Math.max(max, particle.durationMs),
+      0,
+    ) ?? 0;
+  const durationMs = Math.max(mounted?.durationMs ?? 0, particleDurationMs);
+
   try {
-    await delay(Math.min(mounted.durationMs, 1200));
+    await delay(Math.min(durationMs, 1200));
   } finally {
-    mounted.cleanup();
+    mounted?.cleanup();
+    particleLayer?.cleanup();
   }
 }
 
