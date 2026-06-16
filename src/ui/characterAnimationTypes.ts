@@ -49,6 +49,14 @@ export interface CharacterFrameEvent {
   anchor?: CharacterAnchorName;
 }
 
+export interface CharacterAnimationAlignment {
+  baseline: "attack";
+  anchor: "feet";
+  targetX: number;
+  targetY: number;
+  tolerancePx: number;
+}
+
 export interface SpriteAnimationConfig<StateName extends string = string> {
   key: AssetKey;
   fallbackKey?: AssetKey;
@@ -59,6 +67,7 @@ export interface SpriteAnimationConfig<StateName extends string = string> {
   loop: boolean;
   returnTo?: StateName;
   priority: number;
+  alignment?: CharacterAnimationAlignment;
   frameEvents?: readonly CharacterFrameEvent[];
 }
 

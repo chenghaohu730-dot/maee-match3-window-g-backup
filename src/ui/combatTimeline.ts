@@ -1,5 +1,10 @@
+import type { ClearEvent, Piece } from "../core/board.ts";
 import type { CombatEvent } from "../core/combatTypes.ts";
 import type { GameplayEvent } from "../core/gameplayTypes.ts";
+import {
+  getCharacterAnimationConfig,
+  getSpriteAnimationDurationMs,
+} from "./characterAnimationConfig.ts";
 import { PRESENTATION_TIMING } from "./presentationTiming.ts";
 import type {
   CombatTimeline,
@@ -15,6 +20,35 @@ import type {
 } from "./combatTimelineTypes.ts";
 
 type SkillTimelineLevel = "skill" | "ultimate" | undefined;
+type YizaiTurnAction = "attack" | "skill" | "ultimate";
+
+const ACTION_GAP_MS = 40;
+const ACTION_START_MS = 100;
+
+const YIZAI_ACTION_PRESENTATION: Record<
+  YizaiTurnAction,
+  {
+    eventType: CombatTimelineEventType;
+    hitOffsetMs: number;
+    priority: CombatTimelinePriority;
+  }
+> = {
+  attack: {
+    eventType: "character.yizai.attack",
+    hitOffsetMs: 250,
+    priority: "medium",
+  },
+  skill: {
+    eventType: "character.yizai.skill",
+    hitOffsetMs: 350,
+    priority: "medium",
+  },
+  ultimate: {
+    eventType: "character.yizai.ultimate",
+    hitOffsetMs: 420,
+    priority: "high",
+  },
+};
 
 export function createTurnTimeline(
   input: TurnPresentationInput,
@@ -30,17 +64,7 @@ export function createTurnTimeline(
     return createGameEndTimeline({ events: input.gameplayEvents });
   }
 
-  const level = getSkillTimelineLevel(input);
-
-  if (level === "ultimate") {
-    return buildUltimateTimeline(input);
-  }
-
-  if (level === "skill") {
-    return buildSkillTimeline(input);
-  }
-
-  return buildNormalTimeline(input);
+  return buildQueuedTurnTimeline(input, getTurnActionQueue(input));
 }
 
 export function createEnemyAttackTimeline(
@@ -52,7 +76,20 @@ export function createEnemyAttackTimeline(
     return createTimeline("enemyAttack", [], 0, 0, false);
   }
 
-  addEvent(events, "character.enemy.attack", 0, PRESENTATION_TIMING.ENEMY_ATTACK_MS, "high", true);
+  const enemyAttackMs = getSpriteAnimationDurationMs(
+    getCharacterAnimationConfig("enemy", "attack"),
+  );
+  const yizaiHurtMs = getSpriteAnimationDurationMs(
+    getCharacterAnimationConfig("yizai", "hurt"),
+  );
+  const yizaiHurtAtMs = 240;
+  const durationMs = Math.max(
+    PRESENTATION_TIMING.ENEMY_ATTACK_MS,
+    enemyAttackMs,
+    yizaiHurtAtMs + yizaiHurtMs,
+  );
+
+  addEvent(events, "character.enemy.attack", 0, enemyAttackMs, "high", true);
   addEvent(events, "particle.basicProjectile", 110, 300, "low", false, {
     source: "enemy",
   });
@@ -60,14 +97,14 @@ export function createEnemyAttackTimeline(
     target: "player",
   });
   addEvent(events, "combat.playerHpTween", 220, PRESENTATION_TIMING.HP_TWEEN_MS, "high", true);
-  addEvent(events, "character.yizai.hurt", 240, 260, "high", false);
+  addEvent(events, "character.yizai.hurt", yizaiHurtAtMs, yizaiHurtMs, "high", false);
 
   return createTimeline(
     "enemyAttack",
     events,
-    PRESENTATION_TIMING.ENEMY_ATTACK_MS,
+    durationMs,
     Math.min(
-      PRESENTATION_TIMING.ENEMY_ATTACK_MS,
+      durationMs,
       PRESENTATION_TIMING.ENEMY_ATTACK_LOCK_MAX_MS,
     ),
     hasCombatEvent(input.events, "gameLost"),
@@ -78,26 +115,27 @@ export function createWaveTransitionTimeline(
   input: WaveTransitionPresentationInput,
 ): CombatTimeline {
   const events: CombatTimelineEvent[] = [];
+  const enemyDefeatMs = getSpriteAnimationDurationMs(
+    getCharacterAnimationConfig("enemy", "defeat"),
+  );
 
-  addEvent(events, "character.enemy.defeat", 0, 500, "high", true);
+  addEvent(events, "character.enemy.defeat", 0, enemyDefeatMs, "high", true);
   addEvent(events, "combat.enemyHpTween", 0, PRESENTATION_TIMING.HP_TWEEN_MS, "high", true, {
     target: "enemy",
     hp: 0,
   });
   addEvent(events, "ui.waveCleared", 300, 200, "medium", false);
-  addEvent(events, "wave.start", PRESENTATION_TIMING.WAVE_TRANSITION_MS, 0, "high", true);
+  addEvent(events, "wave.start", enemyDefeatMs, 0, "high", true);
+  const durationMs = Math.min(
+    Math.max(PRESENTATION_TIMING.WAVE_TRANSITION_MS, enemyDefeatMs),
+    PRESENTATION_TIMING.WAVE_TRANSITION_MAX_MS,
+  );
 
   return createTimeline(
     "waveTransition",
     events,
-    Math.min(
-      PRESENTATION_TIMING.WAVE_TRANSITION_MS,
-      PRESENTATION_TIMING.WAVE_TRANSITION_MAX_MS,
-    ),
-    Math.min(
-      PRESENTATION_TIMING.WAVE_TRANSITION_MS,
-      PRESENTATION_TIMING.WAVE_TRANSITION_MAX_MS,
-    ),
+    durationMs,
+    durationMs,
     hasCombatEvent(input.events, "gameWon") || hasCombatEvent(input.events, "gameLost"),
   );
 }
@@ -108,21 +146,35 @@ export function createGameEndTimeline(
   const lost = hasCombatEvent(input.events, "gameLost");
   const won = hasCombatEvent(input.events, "gameWon");
   const events: CombatTimelineEvent[] = [];
+  let endAtMs = 0;
 
   if (won) {
-    addEvent(events, "character.yizai.ultimate", 0, 650, "high", true);
-    addEvent(events, "character.enemy.defeat", 120, 500, "high", true);
+    const yizaiUltimateMs = getSpriteAnimationDurationMs(
+      getCharacterAnimationConfig("yizai", "ultimate"),
+    );
+    const enemyDefeatMs = getSpriteAnimationDurationMs(
+      getCharacterAnimationConfig("enemy", "defeat"),
+    );
+
+    addEvent(events, "character.yizai.ultimate", 0, yizaiUltimateMs, "high", true);
+    addEvent(events, "character.enemy.defeat", 120, enemyDefeatMs, "high", true);
+    endAtMs = Math.max(endAtMs, yizaiUltimateMs, 120 + enemyDefeatMs);
   }
 
   if (lost) {
-    addEvent(events, "character.yizai.hurt", 0, 420, "high", true);
+    const yizaiHurtMs = getSpriteAnimationDurationMs(
+      getCharacterAnimationConfig("yizai", "hurt"),
+    );
+
+    addEvent(events, "character.yizai.hurt", 0, yizaiHurtMs, "high", true);
+    endAtMs = Math.max(endAtMs, yizaiHurtMs);
   }
 
-  addEvent(events, "game.end", won || lost ? 420 : 0, 0, "high", true, {
+  addEvent(events, "game.end", won || lost ? endAtMs : 0, 0, "high", true, {
     result: won ? "won" : lost ? "lost" : "unknown",
   });
 
-  return createTimeline("gameEnd", events, 420, null, true);
+  return createTimeline("gameEnd", events, endAtMs, null, true);
 }
 
 export function createReshuffleTimeline(
@@ -181,112 +233,71 @@ export function getCombatEvents(
   return result;
 }
 
-function buildNormalTimeline(input: TurnPresentationInput): CombatTimeline {
+function buildQueuedTurnTimeline(
+  input: TurnPresentationInput,
+  actions: readonly YizaiTurnAction[],
+): CombatTimeline {
   const events: CombatTimelineEvent[] = [];
   const defeated = hasCombatEvent(input.gameplayEvents, "enemyDefeated");
   const waveStarted = hasCombatEvent(input.gameplayEvents, "waveStarted");
   const won = hasCombatEvent(input.gameplayEvents, "gameWon");
+  const kind = getTimelineKindForActions(actions);
   const chainExtension = getChainExtension(input.chainCount, 70);
-  const settleStart = 300;
-  const settleDuration = Math.min(220 + chainExtension, 300);
+  let actionStart = ACTION_START_MS;
+  let firstHitAtMs: number | undefined;
+  let finalActionEndMs = 0;
 
   addEvent(events, "board.swapComplete", 0, 0, "medium", true);
   addEvent(events, "board.clear", 0, PRESENTATION_TIMING.BOARD_CLEAR_MS, "medium", true);
-  addEvent(events, "character.yizai.attack", 120, 260, "medium", false);
-  addEvent(events, "particle.basicProjectile", 120, 360, "low", false, {
-    source: "yizai",
-  });
-  addEnemyDamageEvents(events, PRESENTATION_TIMING.NORMAL_HIT_MS, defeated);
+
+  if (actions.includes("ultimate")) {
+    addEvent(events, "board.ultimateFocus", 0, 180, "medium", true);
+  }
+
+  for (const action of actions) {
+    const timing = getYizaiActionTiming(action);
+
+    addYizaiActionEvents(events, action, actionStart);
+    firstHitAtMs ??= actionStart + timing.hitOffsetMs;
+    finalActionEndMs = actionStart + timing.durationMs;
+    actionStart = finalActionEndMs + ACTION_GAP_MS;
+  }
+
+  const damageAtMs = firstHitAtMs ?? PRESENTATION_TIMING.NORMAL_HIT_MS;
+
+  if (hasCombatEvent(input.gameplayEvents, "enemyDamaged")) {
+    addEnemyDamageEvents(events, damageAtMs, defeated);
+  }
+
+  if (kind === "skill" || kind === "ultimate") {
+    addEvent(
+      events,
+      "board.skillEffect",
+      damageAtMs + 90,
+      Math.min(220 + chainExtension, kind === "ultimate" ? 500 : 320),
+      "medium",
+      true,
+      kind === "ultimate" ? { level: "ultimate" } : undefined,
+    );
+  }
+
+  const settleStart = Math.max(300, finalActionEndMs + 20);
+  const settleDuration = getSettleDuration(kind, chainExtension);
+
   addEvent(events, "board.settle", settleStart, settleDuration, "medium", true);
   addTerminalAndWaveEvents(events, {
     defeated,
     waveStarted,
     won,
     lost: false,
-    defeatAtMs: 300,
+    defeatAtMs: damageAtMs + 160,
   });
 
   return createTimeline(
-    "normal",
+    kind,
     events,
-    PRESENTATION_TIMING.NORMAL_TURN_MAX_MS,
-    Math.min(settleStart + settleDuration, PRESENTATION_TIMING.NORMAL_TURN_MAX_MS),
-    won,
-  );
-}
-
-function buildSkillTimeline(input: TurnPresentationInput): CombatTimeline {
-  const events: CombatTimelineEvent[] = [];
-  const defeated = hasCombatEvent(input.gameplayEvents, "enemyDefeated");
-  const waveStarted = hasCombatEvent(input.gameplayEvents, "waveStarted");
-  const won = hasCombatEvent(input.gameplayEvents, "gameWon");
-  const chainExtension = Math.min(getChainExtension(input.chainCount, 70), 100);
-
-  addEvent(events, "board.swapComplete", 0, 0, "medium", true);
-  addEvent(events, "board.clear", 0, PRESENTATION_TIMING.BOARD_CLEAR_MS, "medium", true);
-  addEvent(events, "ui.skillText", 100, PRESENTATION_TIMING.DAMAGE_TEXT_MS, "medium", false, {
-    level: "skill",
-  });
-  addEvent(events, "character.yizai.skill", 100, 540, "medium", false);
-  addEvent(events, "camera.shake", 100, 360, "medium", false, {
-    intensity: "medium",
-  });
-  addEvent(events, "particle.skillProjectile", 180, 520, "low", false);
-  addEnemyDamageEvents(events, PRESENTATION_TIMING.SKILL_HIT_MS, defeated);
-  addEvent(events, "board.skillEffect", 400, Math.min(220 + chainExtension, 320), "medium", true);
-  addEvent(events, "board.settle", 520, Math.min(280 + chainExtension, 360), "medium", true);
-  addTerminalAndWaveEvents(events, {
-    defeated,
-    waveStarted,
-    won,
-    lost: false,
-    defeatAtMs: 420,
-  });
-
-  return createTimeline(
-    "skill",
-    events,
-    PRESENTATION_TIMING.SKILL_TURN_MAX_MS,
-    PRESENTATION_TIMING.SKILL_TURN_MAX_MS,
-    won,
-  );
-}
-
-function buildUltimateTimeline(input: TurnPresentationInput): CombatTimeline {
-  const events: CombatTimelineEvent[] = [];
-  const defeated = hasCombatEvent(input.gameplayEvents, "enemyDefeated");
-  const waveStarted = hasCombatEvent(input.gameplayEvents, "waveStarted");
-  const won = hasCombatEvent(input.gameplayEvents, "gameWon");
-  const chainExtension = Math.min(getChainExtension(input.chainCount, 75), 150);
-
-  addEvent(events, "board.swapComplete", 0, 0, "medium", true);
-  addEvent(events, "board.ultimateFocus", 0, 180, "medium", true);
-  addEvent(events, "ui.skillText", 120, PRESENTATION_TIMING.DAMAGE_TEXT_MS, "high", false, {
-    level: "ultimate",
-  });
-  addEvent(events, "character.yizai.ultimate", 120, 720, "high", false);
-  addEvent(events, "camera.shake", 120, 520, "high", false, {
-    intensity: "large",
-  });
-  addEvent(events, "particle.ultimateAura", 120, 900, "low", false);
-  addEnemyDamageEvents(events, PRESENTATION_TIMING.ULTIMATE_HIT_MS, defeated);
-  addEvent(events, "board.skillEffect", 500, Math.min(360 + chainExtension, 500), "medium", true, {
-    level: "ultimate",
-  });
-  addEvent(events, "board.settle", 640, Math.min(410 + chainExtension, 520), "medium", true);
-  addTerminalAndWaveEvents(events, {
-    defeated,
-    waveStarted,
-    won,
-    lost: false,
-    defeatAtMs: 430,
-  });
-
-  return createTimeline(
-    "ultimate",
-    events,
-    PRESENTATION_TIMING.ULTIMATE_TURN_MAX_MS,
-    PRESENTATION_TIMING.ULTIMATE_TURN_MAX_MS,
+    getTargetDuration(kind),
+    Math.max(settleStart + settleDuration, getTargetDuration(kind)),
     won,
   );
 }
@@ -301,6 +312,230 @@ function addEnemyDamageEvents(
     target: "enemy",
   });
   addEvent(events, "combat.enemyHpTween", hitAtMs + 20, PRESENTATION_TIMING.HP_TWEEN_MS, defeated ? "high" : "medium", true);
+}
+
+function addYizaiActionEvents(
+  events: CombatTimelineEvent[],
+  action: YizaiTurnAction,
+  atMs: number,
+): void {
+  const timing = getYizaiActionTiming(action);
+
+  addEvent(
+    events,
+    timing.eventType,
+    atMs,
+    timing.durationMs,
+    timing.priority,
+    false,
+  );
+
+  if (action === "attack") {
+    addEvent(events, "particle.basicProjectile", atMs + 20, 360, "low", false, {
+      source: "yizai",
+    });
+    return;
+  }
+
+  const isUltimate = action === "ultimate";
+
+  addEvent(
+    events,
+    "ui.skillText",
+    atMs,
+    PRESENTATION_TIMING.DAMAGE_TEXT_MS,
+    isUltimate ? "high" : "medium",
+    false,
+    { level: action },
+  );
+  addEvent(events, "camera.shake", atMs, isUltimate ? 520 : 360, isUltimate ? "high" : "medium", false, {
+    intensity: isUltimate ? "large" : "medium",
+  });
+  addEvent(
+    events,
+    isUltimate ? "particle.ultimateAura" : "particle.skillProjectile",
+    atMs + (isUltimate ? 0 : 80),
+    isUltimate ? 900 : 520,
+    "low",
+    false,
+  );
+}
+
+function getYizaiActionTiming(action: YizaiTurnAction): {
+  eventType: CombatTimelineEventType;
+  durationMs: number;
+  hitOffsetMs: number;
+  priority: CombatTimelinePriority;
+} {
+  const presentation = YIZAI_ACTION_PRESENTATION[action];
+  const config = getCharacterAnimationConfig("yizai", action);
+
+  return {
+    ...presentation,
+    durationMs: getSpriteAnimationDurationMs(config),
+  };
+}
+
+function getTurnActionQueue(input: TurnPresentationInput): YizaiTurnAction[] {
+  const actions =
+    input.clearEvents
+      ?.filter((event) => event.pieces.length > 0)
+      .map(getActionForClearEvent) ?? [];
+  const primaryAction = getActionFromSkillLevel(getSkillTimelineLevel(input));
+
+  if (actions.length === 0) {
+    if (primaryAction) {
+      return [primaryAction];
+    }
+
+    if (
+      input.summary.totalCleared > 0 ||
+      hasCombatEvent(input.gameplayEvents, "enemyDamaged")
+    ) {
+      return ["attack"];
+    }
+
+    return [];
+  }
+
+  if (
+    primaryAction &&
+    input.clearEvents?.[0]?.pieces.length !== undefined &&
+    input.clearEvents[0].pieces.length >= 4 &&
+    actionPriority(primaryAction) > actionPriority(actions[0]!)
+  ) {
+    actions[0] = primaryAction;
+  }
+
+  return actions;
+}
+
+function getActionForClearEvent(event: ClearEvent): YizaiTurnAction {
+  const maxLineLength = getMaxMatchedLineLength(event.pieces);
+
+  if (maxLineLength >= 5) {
+    return "ultimate";
+  }
+
+  if (maxLineLength >= 4) {
+    return "skill";
+  }
+
+  return "attack";
+}
+
+function getMaxMatchedLineLength(pieces: readonly Piece[]): number {
+  const byType = new Map<number, Set<string>>();
+
+  for (const piece of pieces) {
+    const coords = byType.get(piece.type) ?? new Set<string>();
+    coords.add(`${piece.x},${piece.y}`);
+    byType.set(piece.type, coords);
+  }
+
+  let maxLength = 0;
+
+  for (const coords of byType.values()) {
+    for (const coord of coords) {
+      const [xText, yText] = coord.split(",");
+      const x = Number(xText);
+      const y = Number(yText);
+
+      maxLength = Math.max(
+        maxLength,
+        countContiguous(coords, x, y, 1, 0),
+        countContiguous(coords, x, y, 0, 1),
+      );
+    }
+  }
+
+  return maxLength;
+}
+
+function countContiguous(
+  coords: ReadonlySet<string>,
+  x: number,
+  y: number,
+  dx: number,
+  dy: number,
+): number {
+  let count = 0;
+  let cursorX = x;
+  let cursorY = y;
+
+  while (coords.has(`${cursorX},${cursorY}`)) {
+    count++;
+    cursorX += dx;
+    cursorY += dy;
+  }
+
+  return count;
+}
+
+function getActionFromSkillLevel(
+  level: SkillTimelineLevel,
+): YizaiTurnAction | undefined {
+  if (level === "ultimate") {
+    return "ultimate";
+  }
+
+  if (level === "skill") {
+    return "skill";
+  }
+
+  return undefined;
+}
+
+function getTimelineKindForActions(
+  actions: readonly YizaiTurnAction[],
+): CombatTimelineKind {
+  if (actions.includes("ultimate")) {
+    return "ultimate";
+  }
+
+  if (actions.includes("skill")) {
+    return "skill";
+  }
+
+  return "normal";
+}
+
+function getSettleDuration(
+  kind: CombatTimelineKind,
+  chainExtension: number,
+): number {
+  if (kind === "ultimate") {
+    return Math.min(410 + chainExtension, 520);
+  }
+
+  if (kind === "skill") {
+    return Math.min(280 + chainExtension, 360);
+  }
+
+  return Math.min(220 + chainExtension, 300);
+}
+
+function getTargetDuration(kind: CombatTimelineKind): number {
+  if (kind === "ultimate") {
+    return PRESENTATION_TIMING.ULTIMATE_TURN_MAX_MS;
+  }
+
+  if (kind === "skill") {
+    return PRESENTATION_TIMING.SKILL_TURN_MAX_MS;
+  }
+
+  return PRESENTATION_TIMING.NORMAL_TURN_MAX_MS;
+}
+
+function actionPriority(action: YizaiTurnAction): number {
+  switch (action) {
+    case "ultimate":
+      return 3;
+    case "skill":
+      return 2;
+    case "attack":
+      return 1;
+  }
 }
 
 function addTerminalAndWaveEvents(

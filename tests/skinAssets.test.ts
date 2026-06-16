@@ -73,8 +73,8 @@ test("gameplay rendering stays on fallback when images are unavailable", () => {
   assert.equal(html.includes("data-asset-key=\"piece_red_flame\""), true);
   assert.equal(html.includes("MAEE"), true);
   assert.equal(html.includes("亿仔勇者"), true);
-  assert.equal(html.includes("data-animation-id=\"yizai_skill\""), true);
-  assert.equal(html.includes("data-frame-rate=\"12\""), true);
+  assert.equal(html.includes("data-animation-id=\"yizai_idle\""), true);
+  assert.equal(html.includes("data-frame-rate=\"6\""), true);
   assert.equal(html.includes("url("), false);
 });
 
@@ -248,8 +248,8 @@ test("enemy ids map to readable monster names and combat state classes", () => {
   });
 
   assert.equal(html.includes("南瓜怪"), true);
-  assert.equal(html.includes("enemy-state-hit"), true);
-  assert.equal(html.includes("yizai-state-skill"), true);
+  assert.equal(html.includes("enemy-state-idle"), true);
+  assert.equal(html.includes("yizai-state-idle"), true);
   assert.equal(html.includes("火焰横扫"), true);
 });
 

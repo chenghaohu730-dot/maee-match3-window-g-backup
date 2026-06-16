@@ -461,6 +461,7 @@ export function mountGameApp(root: HTMLDivElement): void {
           ),
         },
         gameplayEvents: controller.lastEvents,
+        clearEvents: result.clearEvents,
         chainCount: result.clearEvents.length,
         state: controller.getState(),
         boardSwap: { from, to, plan },

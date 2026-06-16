@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ResolveSummary } from "../src/core/board.ts";
+import type {
+  ClearEvent,
+  PieceType,
+  ResolveSummary,
+} from "../src/core/board.ts";
 import type { CombatEvent } from "../src/core/combatTypes.ts";
 import type { GameplayEvent } from "../src/core/gameplayTypes.ts";
 import {
   createEnemyAttackTimeline,
+  createGameEndTimeline,
   createReshuffleTimeline,
   createTurnTimeline,
   createWaveTransitionTimeline,
@@ -27,6 +32,7 @@ test("normal 3-match creates a normal combat timeline", () => {
 test("4-match skill creates a skill timeline", () => {
   const timeline = createTurnTimeline({
     summary: summary(4, 1),
+    clearEvents: [clearEvent(1, 0, 4)],
     gameplayEvents: [
       skill("skill"),
       combat({ type: "enemyDamaged", amount: 18, enemyHp: 12 }),
@@ -38,11 +44,13 @@ test("4-match skill creates a skill timeline", () => {
   assert.equal(timeline.durationMs <= PRESENTATION_TIMING.SKILL_TURN_MAX_MS, true);
   assert.equal(eventAt(timeline, "ui.skillText"), 100);
   assert.equal(hasEvent(timeline, "character.yizai.skill"), true);
+  assert.equal(hasEvent(timeline, "character.yizai.attack"), false);
 });
 
 test("5-match creates an ultimate timeline", () => {
   const timeline = createTurnTimeline({
     summary: summary(5, 1),
+    clearEvents: [clearEvent(1, 0, 5)],
     gameplayEvents: [
       skill("ultimate"),
       combat({ type: "enemyDamaged", amount: 35, enemyHp: 5 }),
@@ -55,9 +63,30 @@ test("5-match creates an ultimate timeline", () => {
   assert.equal(hasEvent(timeline, "particle.ultimateAura"), true);
 });
 
+test("chain clears queue yizai actions in clear order", () => {
+  const timeline = createTurnTimeline({
+    summary: summary(7, 2),
+    clearEvents: [clearEvent(1, 0, 3), clearEvent(2, 2, 4)],
+    gameplayEvents: [
+      skill("skill"),
+      combat({ type: "enemyDamaged", amount: 22, enemyHp: 8 }),
+    ],
+    chainCount: 2,
+  });
+
+  const attackAt = eventAt(timeline, "character.yizai.attack");
+  const skillAt = eventAt(timeline, "character.yizai.skill");
+
+  assert.equal(timeline.kind, "skill");
+  assert.equal(attackAt, 100);
+  assert.equal(skillAt, 640);
+  assert.equal((attackAt ?? 0) < (skillAt ?? 0), true);
+});
+
 test("ultimate timeline never exceeds the configured maximum", () => {
   const timeline = createTurnTimeline({
     summary: summary(5, 4),
+    clearEvents: [clearEvent(1, 0, 5)],
     gameplayEvents: [
       skill("ultimate"),
       combat({ type: "enemyDamaged", amount: 35, enemyHp: 5 }),
@@ -79,6 +108,30 @@ test("enemyDefeated prevents a follow-up enemy attack presentation", () => {
 
   assert.equal(timeline.events.length, 0);
   assert.equal(timeline.inputUnlockAtMs, 0);
+});
+
+test("enemy attack timeline leaves enough room for yizai hurt to finish", () => {
+  const timeline = createEnemyAttackTimeline({
+    events: [{ type: "playerDamaged", amount: 8, playerHp: 92 }],
+  });
+
+  const hurt = timeline.events.find((event) => event.type === "character.yizai.hurt");
+
+  assert.equal(hurt?.atMs, 240);
+  assert.equal(hurt?.durationMs, 400);
+  assert.equal(timeline.inputUnlockAtMs, 640);
+});
+
+test("game end timeline waits for full character animations", () => {
+  const won = createGameEndTimeline({
+    events: [{ type: "gameWon" }],
+  });
+  const lost = createGameEndTimeline({
+    events: [{ type: "gameLost" }],
+  });
+
+  assert.equal(eventAt(won, "game.end"), 834);
+  assert.equal(eventAt(lost, "game.end"), 400);
 });
 
 test("gameLost blocks later player input", () => {
@@ -140,6 +193,25 @@ function summary(totalCleared: number, chainCount: number): ResolveSummary {
     totalCleared,
     chainCount,
     wasPlayerMove: true,
+  };
+}
+
+function clearEvent(
+  chain: number,
+  row: number,
+  length: number,
+  type: PieceType = 0,
+): ClearEvent {
+  return {
+    chain,
+    damage: length * 2,
+    pieces: Array.from({ length }, (_, x) => ({
+      id: `c${chain}-${x}`,
+      type,
+      x,
+      y: row,
+      isMatched: true,
+    })),
   };
 }
 

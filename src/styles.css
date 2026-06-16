@@ -1112,6 +1112,124 @@ p {
   animation: float-pop 620ms ease-out both;
 }
 
+.animation-calibration {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  color: #182235;
+  background:
+    linear-gradient(180deg, #f7faf8, #e8f3ef 42%, #f4ead7);
+}
+
+.animation-calibration-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgb(45 56 71 / 14%);
+  background: rgb(255 255 255 / 88%);
+}
+
+.animation-calibration-toolbar strong {
+  font-size: 18px;
+}
+
+.animation-calibration-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.animation-calibration-tab {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgb(45 56 71 / 20%);
+  border-radius: 8px;
+  color: #243247;
+  background: #fff;
+  font-weight: 900;
+}
+
+.animation-calibration-tab.active {
+  border-color: #1d4ed8;
+  color: #fff;
+  background: #2563eb;
+}
+
+.animation-calibration-main {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 18px;
+  padding: 18px;
+}
+
+.animation-calibration-stage {
+  position: relative;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgb(45 56 71 / 16%);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.animation-calibration-frame {
+  position: relative;
+  width: min(58vw, 420px);
+  height: min(58vw, 420px);
+}
+
+.animation-calibration-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(30 41 59 / 8%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(30 41 59 / 8%) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.animation-calibration-feet-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(493 / 512 * 100%);
+  z-index: 2;
+  height: 2px;
+  background: rgb(239 68 68 / 78%);
+  box-shadow: 0 0 8px rgb(239 68 68 / 32%);
+}
+
+.animation-calibration-sprite.maee-placeholder {
+  z-index: 3;
+  width: 100%;
+  height: 100%;
+  border-color: transparent;
+  background-color: transparent;
+}
+
+.animation-calibration-readout {
+  min-width: 0;
+  align-self: start;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgb(45 56 71 / 16%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 82%);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.animation-calibration-readout span {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 78%);
+}
+
 .combat-info-panel {
   background: transparent;
 }
@@ -2817,6 +2935,24 @@ p {
 }
 
 @media (max-width: 430px) {
+  .animation-calibration-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .animation-calibration-tabs {
+    justify-content: flex-start;
+  }
+
+  .animation-calibration-main {
+    grid-template-columns: 1fr;
+  }
+
+  .animation-calibration-frame {
+    width: min(86vw, 360px);
+    height: min(86vw, 360px);
+  }
+
   .start-scene {
     padding: 36px 18px 22px;
   }

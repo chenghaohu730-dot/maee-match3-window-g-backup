@@ -19,6 +19,7 @@ import {
 import {
   getCharacterAnimationConfig,
   getCharacterAnchors,
+  getSpriteAnimationDurationMs,
 } from "./characterAnimationConfig.ts";
 import { resolveCharacterAnimationSource } from "./characterAnimator.ts";
 import type {
@@ -238,7 +239,7 @@ function renderBattleStage(model: GameplayViewModel): string {
   const feedbackEvents = showTurnFeedback ? model.lastEvents : [];
   const characterAnimations =
     model.characterAnimations ??
-    createCharacterAnimationSnapshot(state, feedbackEvents);
+    createCharacterAnimationSnapshot(state, []);
   const playerState = characterAnimations.yizai;
   const enemyState = characterAnimations.enemy;
 
@@ -973,6 +974,7 @@ function characterAnimationAttrs(
     `data-frame-width="${config.frameWidth}"`,
     `data-frame-height="${config.frameHeight}"`,
     `data-frame-count="${config.frameCount}"`,
+    `data-animation-duration-ms="${getSpriteAnimationDurationMs(config)}"`,
     `data-sprite-key="${escapeHtml(config.key)}"`,
   ];
 

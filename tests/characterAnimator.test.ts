@@ -5,6 +5,8 @@ import { fairySkin } from "../src/skins/fairySkin.ts";
 import type { Match3Skin, SkinResource } from "../src/skins/skinTypes.ts";
 import {
   getCharacterAnchor,
+  getSpriteAnimationDurationMs,
+  YIZAI_ATTACK_ALIGNMENT,
   YIZAI_ANCHORS,
   YIZAI_ANIMATION_CONFIG,
 } from "../src/ui/characterAnimationConfig.ts";
@@ -30,6 +32,7 @@ test("missing sprite sheet uses the static fallback key when available", () => {
 });
 
 test("missing fallback image still resolves to a placeholder without throwing", () => {
+  const skin = withAvailableResources(fairySkin, []);
   const config: SpriteAnimationConfig = {
     key: "yizai_hero_attack_sheet",
     frameWidth: 512,
@@ -39,16 +42,35 @@ test("missing fallback image still resolves to a placeholder without throwing", 
     loop: false,
     priority: 10,
   };
-  const source = resolveCharacterAnimationSource(config, fairySkin);
+  const source = resolveCharacterAnimationSource(config, skin);
 
   assert.equal(source.mode, "placeholder");
   assert.equal(source.key, "yizai_hero_attack_sheet");
   assert.equal(source.path, "");
 });
 
-test("static fallback image updates when animation state changes", () => {
+test("available attack sprite sheet resolves before the static fallback", () => {
   const skin = withAvailableResources(fairySkin, [
+    "yizai_hero_attack_sheet",
+    "yizai_hero_attack",
+  ]);
+  const source = resolveCharacterAnimationSource(
+    YIZAI_ANIMATION_CONFIG.attack,
+    skin,
+  );
+
+  assert.equal(source.mode, "sheet");
+  assert.equal(source.key, "yizai_hero_attack_sheet");
+  assert.equal(source.path, "/assets/fairy/yizai/yizai_hero_attack_sheet.png");
+  assert.equal(source.fallbackKey, "yizai_hero_attack");
+  assert.equal(source.fallbackPath, "/assets/fairy/yizai/yizai_hero_attack.png");
+});
+
+test("sprite sheet image updates when animation state changes", () => {
+  const skin = withAvailableResources(fairySkin, [
+    "yizai_hero_idle_sheet",
     "yizai_hero_idle",
+    "yizai_hero_attack_sheet",
     "yizai_hero_attack",
   ]);
   const element = createFakeCharacterElement();
@@ -63,20 +85,43 @@ test("static fallback image updates when animation state changes", () => {
   });
 
   assert.equal(animator.play("idle"), true);
-  assert.equal(element.dataset.assetKey, "yizai_hero_idle");
+  assert.equal(element.dataset.assetKey, "yizai_hero_idle_sheet");
   assert.equal(element.dataset.fallbackKey, "yizai_hero_idle");
+  assert.equal(element.style.backgroundSize, "400% 100%");
   assert.equal(
     element.style.backgroundImage,
-    'url("/assets/fairy/yizai/yizai_hero_idle.png")',
+    'url("/assets/fairy/yizai/yizai_hero_idle_sheet.png")',
   );
 
   assert.equal(animator.play("attack"), true);
-  assert.equal(element.dataset.assetKey, "yizai_hero_attack");
+  assert.equal(element.dataset.assetKey, "yizai_hero_attack_sheet");
   assert.equal(element.dataset.fallbackKey, "yizai_hero_attack");
+  assert.equal(element.style.backgroundSize, "600% 100%");
   assert.equal(
     element.style.backgroundImage,
-    'url("/assets/fairy/yizai/yizai_hero_attack.png")',
+    'url("/assets/fairy/yizai/yizai_hero_attack_sheet.png")',
   );
+});
+
+test("horizontal sprite sheets advance by frame count", () => {
+  const skin = withAvailableResources(fairySkin, ["yizai_hero_skill_sheet"]);
+  const element = createFakeCharacterElement();
+  const animator = new CharacterAnimator({
+    characterId: "yizai",
+    configs: {
+      skill: YIZAI_ANIMATION_CONFIG.skill as SpriteAnimationConfig<string>,
+    },
+    element,
+    skin,
+  });
+
+  assert.equal(animator.play("skill"), true);
+  assert.equal(element.style.backgroundSize, "800% 100%");
+  assert.equal(element.style.backgroundPosition, "0% center");
+
+  animator.advanceToFrame(5);
+
+  assert.equal(element.style.backgroundPosition, "57.14285714285714% center");
 });
 
 test("frameEvents emit at their configured frame with anchor metadata", () => {
@@ -110,6 +155,30 @@ test("anchor config exposes relative coordinates", () => {
     y: 0.32,
   });
   assert.equal(getCharacterAnchor("enemy", "enemyHitPoint")?.x, 0.5);
+});
+
+test("yizai sheets use attack as the feet alignment baseline", () => {
+  assert.deepEqual(YIZAI_ATTACK_ALIGNMENT, {
+    baseline: "attack",
+    anchor: "feet",
+    targetX: 256,
+    targetY: 493,
+    tolerancePx: 3,
+  });
+
+  for (const state of ["idle", "attack", "skill", "ultimate", "hurt"] as const) {
+    assert.deepEqual(
+      YIZAI_ANIMATION_CONFIG[state].alignment,
+      YIZAI_ATTACK_ALIGNMENT,
+    );
+  }
+});
+
+test("animation duration is derived from frame count and fps", () => {
+  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.attack), 500);
+  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.skill), 667);
+  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.ultimate), 834);
+  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.hurt), 400);
 });
 
 function withAvailableResources(

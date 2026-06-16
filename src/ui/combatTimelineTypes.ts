@@ -1,4 +1,4 @@
-import type { MatchCell, ResolveSummary } from "../core/board.ts";
+import type { ClearEvent, MatchCell, ResolveSummary } from "../core/board.ts";
 import type { CombatEvent } from "../core/combatTypes.ts";
 import type { GameplayEvent, GameplayState } from "../core/gameplayTypes.ts";
 import type { SkillResolveResult } from "../core/skillTypes.ts";
@@ -70,6 +70,7 @@ export interface BoardSwapPresentation {
 
 export interface TurnPresentationInput {
   summary: ResolveSummary;
+  clearEvents?: readonly ClearEvent[];
   gameplayEvents: readonly GameplayEvent[];
   skillResult?: SkillResolveResult;
   vfxEvents?: readonly VfxEvent[];

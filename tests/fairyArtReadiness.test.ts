@@ -32,6 +32,17 @@ const FAIRY_MVP_ASSETS = [
   ["yizai_hero_skill", "/assets/fairy/yizai/yizai_hero_skill.png"],
   ["yizai_hero_ultimate", "/assets/fairy/yizai/yizai_hero_ultimate.png"],
   ["yizai_hero_hurt", "/assets/fairy/yizai/yizai_hero_hurt.png"],
+  ["yizai_hero_idle_sheet", "/assets/fairy/yizai/yizai_hero_idle_sheet.png"],
+  [
+    "yizai_hero_attack_sheet",
+    "/assets/fairy/yizai/yizai_hero_attack_sheet.png",
+  ],
+  ["yizai_hero_skill_sheet", "/assets/fairy/yizai/yizai_hero_skill_sheet.png"],
+  [
+    "yizai_hero_ultimate_sheet",
+    "/assets/fairy/yizai/yizai_hero_ultimate_sheet.png",
+  ],
+  ["yizai_hero_hurt_sheet", "/assets/fairy/yizai/yizai_hero_hurt_sheet.png"],
   ["monster_slime_idle", "/assets/fairy/monsters/monster_slime_idle.png"],
   ["monster_slime_hit", "/assets/fairy/monsters/monster_slime_hit.png"],
   ["monster_slime_attack", "/assets/fairy/monsters/monster_slime_attack.png"],
@@ -67,6 +78,14 @@ const FORMAL_YIZAI_HERO_KEYS = [
   "yizai_hero_hurt",
 ] as const satisfies readonly AssetKey[];
 
+const FORMAL_YIZAI_SHEET_KEYS = [
+  "yizai_hero_idle_sheet",
+  "yizai_hero_attack_sheet",
+  "yizai_hero_skill_sheet",
+  "yizai_hero_ultimate_sheet",
+  "yizai_hero_hurt_sheet",
+] as const satisfies readonly AssetKey[];
+
 const FORMAL_MONSTER_SLIME_KEYS = [
   "monster_slime_idle",
   "monster_slime_hit",
@@ -79,6 +98,7 @@ const FORMAL_READY_KEYS = [
   ...FORMAL_BOARD_KEYS,
   ...FORMAL_BACKGROUND_KEYS,
   ...FORMAL_YIZAI_HERO_KEYS,
+  ...FORMAL_YIZAI_SHEET_KEYS,
   ...FORMAL_MONSTER_SLIME_KEYS,
 ] as const satisfies readonly AssetKey[];
 
@@ -177,8 +197,15 @@ test("formal fairy background images render by default", () => {
   );
 });
 
-test("formal yizai hero fallback images render by default", () => {
+test("formal yizai hero sheets render by default", () => {
   for (const key of FORMAL_YIZAI_HERO_KEYS) {
+    const resource = fairySkin.resources[key];
+
+    assert.equal(resource.available, true);
+    assert.equal(hasImageResource(resource), true);
+  }
+
+  for (const key of FORMAL_YIZAI_SHEET_KEYS) {
     const resource = fairySkin.resources[key];
 
     assert.equal(resource.available, true);
@@ -194,10 +221,79 @@ test("formal yizai hero fallback images render by default", () => {
   });
 
   assert.equal(
-    html.includes("url('/assets/fairy/yizai/yizai_hero_idle.png')"),
+    html.includes("url('/assets/fairy/yizai/yizai_hero_idle_sheet.png')"),
     true,
   );
+  assert.equal(html.includes("data-sprite-key=\"yizai_hero_idle_sheet\""), true);
+  assert.equal(html.includes("data-frame-count=\"4\""), true);
   assert.equal(html.includes("data-fallback-key=\"yizai_hero_idle\""), true);
+});
+
+test("formal yizai attack sheet renders with 6 horizontal frames", () => {
+  const resource = fairySkin.resources.yizai_hero_attack_sheet;
+  const html = renderGameplayScene({
+    ...createGameplayModel(fairySkin),
+    characterAnimations: {
+      yizai: "attack",
+      enemy: "idle",
+    },
+  });
+
+  assert.equal(resource.available, true);
+  assert.equal(hasImageResource(resource), true);
+  assert.equal(html.includes("data-animation-state=\"attack\""), true);
+  assert.equal(
+    html.includes("data-sprite-key=\"yizai_hero_attack_sheet\""),
+    true,
+  );
+  assert.equal(html.includes("data-frame-count=\"6\""), true);
+  assert.equal(html.includes("data-fallback-key=\"yizai_hero_attack\""), true);
+  assert.equal(
+    html.includes(
+      "url('/assets/fairy/yizai/yizai_hero_attack_sheet.png')",
+    ),
+    true,
+  );
+});
+
+test("formal yizai skill and ultimate sheets render as horizontal animations", () => {
+  const skillHtml = renderGameplayScene({
+    ...createGameplayModel(fairySkin),
+    characterAnimations: {
+      yizai: "skill",
+      enemy: "idle",
+    },
+  });
+  const ultimateHtml = renderGameplayScene({
+    ...createGameplayModel(fairySkin),
+    characterAnimations: {
+      yizai: "ultimate",
+      enemy: "idle",
+    },
+  });
+
+  assert.equal(skillHtml.includes("data-sprite-key=\"yizai_hero_skill_sheet\""), true);
+  assert.equal(skillHtml.includes("data-frame-count=\"8\""), true);
+  assert.equal(skillHtml.includes("data-fallback-key=\"yizai_hero_skill\""), true);
+  assert.equal(
+    skillHtml.includes("url('/assets/fairy/yizai/yizai_hero_skill_sheet.png')"),
+    true,
+  );
+  assert.equal(
+    ultimateHtml.includes("data-sprite-key=\"yizai_hero_ultimate_sheet\""),
+    true,
+  );
+  assert.equal(ultimateHtml.includes("data-frame-count=\"10\""), true);
+  assert.equal(
+    ultimateHtml.includes("data-fallback-key=\"yizai_hero_ultimate\""),
+    true,
+  );
+  assert.equal(
+    ultimateHtml.includes(
+      "url('/assets/fairy/yizai/yizai_hero_ultimate_sheet.png')",
+    ),
+    true,
+  );
 });
 
 test("formal forest slime fallback images render for every enemy state", () => {
@@ -270,7 +366,7 @@ test("available first-batch fairy MVP images render asset URLs", () => {
     "piece_green_nature",
     "piece_purple_arcane",
     "piece_orange_courage",
-    "yizai_hero_attack",
+    "yizai_hero_attack_sheet",
     "monster_slime_idle",
   ]);
   const html = renderGameplayScene(createGameplayModel(imageReadySkin));
@@ -285,9 +381,10 @@ test("available first-batch fairy MVP images render asset URLs", () => {
     true,
   );
   assert.equal(
-    html.includes("url('/assets/fairy/yizai/yizai_hero_attack.png')"),
+    html.includes("url('/assets/fairy/yizai/yizai_hero_idle_sheet.png')"),
     true,
   );
+  assert.equal(html.includes("data-sprite-key=\"yizai_hero_idle_sheet\""), true);
   assert.equal(
     html.includes("url('/assets/fairy/monsters/monster_slime_idle.png')"),
     true,

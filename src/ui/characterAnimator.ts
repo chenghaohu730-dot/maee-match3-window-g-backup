@@ -3,6 +3,7 @@ import { getSkinResource, hasImageResource } from "../skins/skinTypes.ts";
 import {
   CHARACTER_ANIMATION_CONFIGS,
   CHARACTER_ANCHORS,
+  getSpriteAnimationDurationMs,
 } from "./characterAnimationConfig.ts";
 import {
   collectRuntimeFrameEvents,
@@ -43,10 +44,9 @@ export interface CharacterAnimationMount {
 export class CharacterAnimator<StateName extends string = string> {
   private currentState: StateName | undefined;
   private currentConfig: SpriteAnimationConfig<StateName> | undefined;
-  private frameRequestId: number | undefined;
+  private frameTimerId: number | undefined;
   private readonly emittedFrameEvents = new Set<string>();
   private lastFrame = 1;
-  private startedAt = 0;
 
   constructor(private readonly options: CharacterAnimatorOptions<StateName>) {}
 
@@ -60,13 +60,14 @@ export class CharacterAnimator<StateName extends string = string> {
 
   stop(): void {
     if (
-      this.frameRequestId !== undefined &&
-      typeof cancelAnimationFrame === "function"
+      this.frameTimerId !== undefined &&
+      typeof window !== "undefined" &&
+      typeof window.clearTimeout === "function"
     ) {
-      cancelAnimationFrame(this.frameRequestId);
+      window.clearTimeout(this.frameTimerId);
     }
 
-    this.frameRequestId = undefined;
+    this.frameTimerId = undefined;
   }
 
   advanceToFrame(frame: number): CharacterAnimationRuntimeEvent[] {
@@ -136,36 +137,40 @@ export class CharacterAnimator<StateName extends string = string> {
   }
 
   private startPlayback(): void {
-    if (!this.currentConfig || typeof requestAnimationFrame !== "function") {
+    if (
+      !this.currentConfig ||
+      typeof window === "undefined" ||
+      typeof window.setTimeout !== "function"
+    ) {
       return;
     }
 
-    this.startedAt =
-      typeof performance === "undefined" ? Date.now() : performance.now();
     const frameDurationMs = 1000 / Math.max(this.currentConfig.fps, 1);
 
-    const step = (time: number): void => {
+    const step = (): void => {
       if (!this.currentConfig) {
         return;
       }
 
-      const elapsed = Math.max(0, time - this.startedAt);
-      const zeroBasedFrame = Math.floor(elapsed / frameDurationMs);
-      const nextFrame = this.currentConfig.loop
-        ? (zeroBasedFrame % this.currentConfig.frameCount) + 1
-        : Math.min(zeroBasedFrame + 1, this.currentConfig.frameCount);
+      const nextFrame = this.lastFrame + 1;
 
-      this.advanceToFrame(nextFrame);
+      if (nextFrame > this.currentConfig.frameCount) {
+        if (this.currentConfig.loop) {
+          this.advanceToFrame(1);
+          this.frameTimerId = window.setTimeout(step, frameDurationMs);
+          return;
+        }
 
-      if (!this.currentConfig.loop && zeroBasedFrame >= this.currentConfig.frameCount) {
+        this.frameTimerId = undefined;
         this.completeCurrentAnimation();
         return;
       }
 
-      this.frameRequestId = requestAnimationFrame(step);
+      this.advanceToFrame(nextFrame);
+      this.frameTimerId = window.setTimeout(step, frameDurationMs);
     };
 
-    this.frameRequestId = requestAnimationFrame(step);
+    this.frameTimerId = window.setTimeout(step, frameDurationMs);
   }
 
   private completeCurrentAnimation(): void {
@@ -217,6 +222,9 @@ export class CharacterAnimator<StateName extends string = string> {
     element.dataset.frameCount = String(config.frameCount);
     element.dataset.frameWidth = String(config.frameWidth);
     element.dataset.frameHeight = String(config.frameHeight);
+    element.dataset.animationDurationMs = String(
+      getSpriteAnimationDurationMs(config),
+    );
     element.style.setProperty("--character-frame-count", String(config.frameCount));
     element.style.setProperty("--character-frame-width", `${config.frameWidth}`);
     element.style.setProperty("--character-frame-height", `${config.frameHeight}`);

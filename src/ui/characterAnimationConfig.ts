@@ -2,6 +2,7 @@ import type {
   CharacterAnchorConfig,
   CharacterAnchorName,
   CharacterAnchorPoint,
+  CharacterAnimationAlignment,
   CharacterAnimationConfigMap,
   CharacterAnimationConfigs,
   CharacterId,
@@ -9,6 +10,14 @@ import type {
   SpriteAnimationConfig,
   YizaiAnimationState,
 } from "./characterAnimationTypes.ts";
+
+export const YIZAI_ATTACK_ALIGNMENT: CharacterAnimationAlignment = {
+  baseline: "attack",
+  anchor: "feet",
+  targetX: 256,
+  targetY: 493,
+  tolerancePx: 3,
+};
 
 export const YIZAI_ANIMATION_CONFIG = {
   idle: {
@@ -20,6 +29,7 @@ export const YIZAI_ANIMATION_CONFIG = {
     fps: 6,
     loop: true,
     priority: 0,
+    alignment: YIZAI_ATTACK_ALIGNMENT,
   },
   attack: {
     key: "yizai_hero_attack_sheet",
@@ -31,6 +41,7 @@ export const YIZAI_ANIMATION_CONFIG = {
     loop: false,
     returnTo: "idle",
     priority: 10,
+    alignment: YIZAI_ATTACK_ALIGNMENT,
     frameEvents: [
       {
         frame: 3,
@@ -50,6 +61,7 @@ export const YIZAI_ANIMATION_CONFIG = {
     loop: false,
     returnTo: "idle",
     priority: 20,
+    alignment: YIZAI_ATTACK_ALIGNMENT,
     frameEvents: [
       {
         frame: 2,
@@ -75,6 +87,7 @@ export const YIZAI_ANIMATION_CONFIG = {
     loop: false,
     returnTo: "idle",
     priority: 30,
+    alignment: YIZAI_ATTACK_ALIGNMENT,
     frameEvents: [
       {
         frame: 2,
@@ -105,6 +118,7 @@ export const YIZAI_ANIMATION_CONFIG = {
     loop: false,
     returnTo: "idle",
     priority: 25,
+    alignment: YIZAI_ATTACK_ALIGNMENT,
   },
 } as const satisfies CharacterAnimationConfigMap<YizaiAnimationState>;
 
@@ -200,6 +214,10 @@ export function getCharacterAnimationConfig(
 export function getCharacterAnimationConfig(
   characterId: CharacterId,
   state: string,
+): SpriteAnimationConfig;
+export function getCharacterAnimationConfig(
+  characterId: CharacterId,
+  state: string,
 ): SpriteAnimationConfig {
   if (characterId === "yizai") {
     return (
@@ -211,6 +229,29 @@ export function getCharacterAnimationConfig(
   return (
     ENEMY_ANIMATION_CONFIG[state as EnemyAnimationState] ??
     ENEMY_ANIMATION_CONFIG.idle
+  );
+}
+
+export function getSpriteAnimationDurationMs(
+  config: Pick<SpriteAnimationConfig, "frameCount" | "fps">,
+): number {
+  return Math.ceil((config.frameCount / Math.max(config.fps, 1)) * 1000);
+}
+
+export function getCharacterAnimationDurationMs(
+  characterId: "yizai",
+  state: YizaiAnimationState,
+): number;
+export function getCharacterAnimationDurationMs(
+  characterId: "enemy",
+  state: EnemyAnimationState,
+): number;
+export function getCharacterAnimationDurationMs(
+  characterId: CharacterId,
+  state: string,
+): number {
+  return getSpriteAnimationDurationMs(
+    getCharacterAnimationConfig(characterId, state),
   );
 }
 

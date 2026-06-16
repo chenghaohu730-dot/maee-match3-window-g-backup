@@ -1,6 +1,6 @@
 # 童话宇宙 MVP 正式美术资源接入规范
 
-本文档用于 Window H：童话宇宙第一批正式美术资源接入准备。当前阶段只建立目录、命名、尺寸和校验机制，不放入真实 PNG，不把资源标记为可用。
+本文档用于童话宇宙第一批正式美术资源接入准备与验收。当前亿仔角色使用横向序列帧 sheet 接入，已通过的正式 PNG 可在 `fairySkin` 中标记为可用。
 
 ## 资源命名
 
@@ -47,7 +47,12 @@ public/assets/fairy/ui/
 
 ### 亿仔
 
-- 原图：512x512 PNG
+- 角色动画使用横向序列帧 sheet PNG，静态兜底图由同一套新序列帧的第一帧生成。
+- `yizai_hero_idle_sheet.png`：2048x512，4 帧
+- `yizai_hero_attack_sheet.png`：3072x512，6 帧
+- `yizai_hero_skill_sheet.png`：4096x512，8 帧
+- `yizai_hero_ultimate_sheet.png`：5120x512，10 帧
+- `yizai_hero_hurt_sheet.png`：2048x512，4 帧
 - 背景：透明
 - 必须保留亿仔白熊主体、黑粗眉、橙黄色口鼻区、黑色大鼻子
 - 头部或头饰必须有正向、清晰、无遮挡的 `MAEE`
@@ -76,11 +81,16 @@ public/assets/fairy/ui/
 | board | `ft_grid_cell_highlight.png` | `public/assets/fairy/board/` | 80x80 或 128x128 | 是 | MVP 正式美术必须 | `ft_grid_cell_highlight` | `available=false`，使用高亮棋格 fallback |
 | backgrounds | `ft_gameplay_bg.png` | `public/assets/fairy/backgrounds/` | 750x1334 | 可不透明 | MVP 正式美术必须 | `ft_gameplay_bg` | `available=false`，使用玩法背景 fallback |
 | backgrounds | `ft_battle_stage_bg.png` | `public/assets/fairy/backgrounds/` | 750x360 | 可不透明 | MVP 正式美术必须 | `ft_battle_stage_bg` | `available=false`，使用战斗舞台 fallback |
-| yizai | `yizai_hero_idle.png` | `public/assets/fairy/yizai/` | 512x512 | 是 | MVP 正式美术必须 | `yizai_hero_idle` | `available=false`，使用亿仔待机 fallback |
-| yizai | `yizai_hero_attack.png` | `public/assets/fairy/yizai/` | 512x512 | 是 | MVP 正式美术必须 | `yizai_hero_attack` | `available=false`，使用亿仔攻击 fallback |
-| yizai | `yizai_hero_skill.png` | `public/assets/fairy/yizai/` | 512x512 | 是 | MVP 正式美术必须 | `yizai_hero_skill` | `available=false`，使用亿仔技能 fallback |
-| yizai | `yizai_hero_ultimate.png` | `public/assets/fairy/yizai/` | 512x512 | 是 | MVP 正式美术必须 | `yizai_hero_ultimate` | `available=false`，使用亿仔大招 fallback |
-| yizai | `yizai_hero_hurt.png` | `public/assets/fairy/yizai/` | 512x512 | 是 | MVP 正式美术必须 | `yizai_hero_hurt` | `available=false`，使用亿仔受击 fallback |
+| yizai | `yizai_hero_idle.png` | `public/assets/fairy/yizai/` | 512x512 | 是 | MVP 正式美术必须 | `yizai_hero_idle` | `available=true`，待机静态兜底 |
+| yizai | `yizai_hero_attack.png` | `public/assets/fairy/yizai/` | 512x512 | 是 | MVP 正式美术必须 | `yizai_hero_attack` | `available=true`，攻击静态兜底 |
+| yizai | `yizai_hero_skill.png` | `public/assets/fairy/yizai/` | 512x512 | 是 | MVP 正式美术必须 | `yizai_hero_skill` | `available=true`，技能静态兜底 |
+| yizai | `yizai_hero_ultimate.png` | `public/assets/fairy/yizai/` | 512x512 | 是 | MVP 正式美术必须 | `yizai_hero_ultimate` | `available=true`，大招静态兜底 |
+| yizai | `yizai_hero_hurt.png` | `public/assets/fairy/yizai/` | 512x512 | 是 | MVP 正式美术必须 | `yizai_hero_hurt` | `available=true`，受击静态兜底 |
+| yizai | `yizai_hero_idle_sheet.png` | `public/assets/fairy/yizai/` | 2048x512 | 是 | MVP 正式美术必须 | `yizai_hero_idle_sheet` | `available=true`，待机循环 4 帧 |
+| yizai | `yizai_hero_attack_sheet.png` | `public/assets/fairy/yizai/` | 3072x512 | 是 | MVP 正式美术必须 | `yizai_hero_attack_sheet` | `available=true`，普通攻击 6 帧 |
+| yizai | `yizai_hero_skill_sheet.png` | `public/assets/fairy/yizai/` | 4096x512 | 是 | MVP 正式美术必须 | `yizai_hero_skill_sheet` | `available=true`，4 消技能 8 帧 |
+| yizai | `yizai_hero_ultimate_sheet.png` | `public/assets/fairy/yizai/` | 5120x512 | 是 | MVP 正式美术必须 | `yizai_hero_ultimate_sheet` | `available=true`，5 消大招 10 帧 |
+| yizai | `yizai_hero_hurt_sheet.png` | `public/assets/fairy/yizai/` | 2048x512 | 是 | MVP 正式美术必须 | `yizai_hero_hurt_sheet` | `available=true`，受击 4 帧 |
 | monsters | `monster_slime_idle.png` | `public/assets/fairy/monsters/` | 384x384 | 是 | MVP 正式美术必须 | `monster_slime_idle` | `available=false`，使用史莱姆 fallback |
 | monsters | `monster_slime_hit.png` | `public/assets/fairy/monsters/` | 384x384 | 是 | MVP 正式美术必须 | `monster_slime_hit` | `available=false`，使用史莱姆受击 fallback |
 | monsters | `monster_slime_attack.png` | `public/assets/fairy/monsters/` | 384x384 | 是 | MVP 正式美术必须 | `monster_slime_attack` | `available=false`，使用史莱姆攻击 fallback |
@@ -89,7 +99,7 @@ public/assets/fairy/ui/
 ## 当前 fallback 状态
 
 - `fairySkin.resources` 已为第一批资源保留路径和 fallback 信息。
-- 当前所有正式 PNG 资源仍保持 `available=false`。
+- 已接入并通过目检的正式 PNG 可保持 `available=true`。
 - 图片不存在时，页面使用 CSS fallback 和占位文案，不应崩溃。
 - Window I 放入正式 PNG 后，再逐项把确认可用的资源标记为 `available=true`。
 
@@ -97,7 +107,7 @@ public/assets/fairy/ui/
 
 1. 将正式 PNG 放入对应目录，文件名必须与上表一致。
 2. 检查亿仔资源：白熊主体、粗黑眉、橙黄色口鼻区、黑鼻、正向可见 `MAEE`。
-3. 将已通过目检的资源在 `fairySkin` 对应 resource 上标记为可用。
+3. 将已通过目检的资源在 `fairySkin` 对应 resource 上标记为可用；亿仔序列帧需确认帧数和横向 512 等分配置一致。
 4. 运行：
 
 ```sh

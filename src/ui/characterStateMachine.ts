@@ -191,12 +191,8 @@ function buildStateFallbackRequests(
 
   if (state.phase === "lost" || state.playerHp <= 0) {
     requests.push({ characterId: "yizai", state: "hurt" });
-  } else if (state.phase === "won" || state.lastSkillLevel === "ultimate") {
+  } else if (state.phase === "won") {
     requests.push({ characterId: "yizai", state: "ultimate" });
-  } else if (state.lastSkillText || getBattleVfxKey(state.lastVfxKeys)) {
-    requests.push({ characterId: "yizai", state: "skill" });
-  } else if (state.lastDamage > 0) {
-    requests.push({ characterId: "yizai", state: "attack" });
   }
 
   if (state.enemyHp <= 0 && (state.phase === "won" || state.phase === "playing")) {
@@ -237,13 +233,4 @@ function createRuntimeState(
     priority: config.priority,
     loop: config.loop,
   };
-}
-
-function getBattleVfxKey(keys: readonly string[]): string | undefined {
-  return keys.find(
-    (key) =>
-      !key.startsWith("screenShake:") &&
-      !key.startsWith("skillText:") &&
-      !key.startsWith("combo:"),
-  );
 }
