@@ -13,6 +13,7 @@ import type { ModalKind } from "./sceneState.ts";
 import { UNIVERSE_CARDS } from "./sceneState.ts";
 import { PHONE_LAYOUT } from "./layout.ts";
 import {
+  getBattleVfxPresentation,
   getScreenShakeClassFromKeys,
   getSkillDisplayText,
 } from "./skillVfxLayer.ts";
@@ -43,6 +44,9 @@ export interface UniverseSceneViewModel {
   skin: Match3Skin;
   fairySkin: Match3Skin;
 }
+
+type EnemyAnimationState = "idle" | "hit" | "attack" | "defeat";
+type CombatEventType = Extract<GameplayEvent, { type: "combat" }>["event"]["type"];
 
 export function renderStartScene(model: StartSceneViewModel): string {
   const { skin } = model;
@@ -147,23 +151,7 @@ export function renderGameplayScene(model: GameplayViewModel): string {
           <button class="icon-button" type="button" aria-label="暂停">Ⅱ</button>
         </header>
 
-        <section class="battle-zone ${assetClasses(
-          skin,
-          "ft_battle_stage_bg",
-        )}" aria-label="battle status" ${assetAttrs(skin, "ft_battle_stage_bg")}>
-          <div class="stage-actor stage-actor-hero">
-            ${renderMaeePlaceholder(skin, state)}
-          </div>
-          <div class="stage-vfx-lane">
-            <div class="versus-mark">VS</div>
-            <div class="stage-hit-flash ${getShakeClass(state)}"></div>
-          </div>
-          <div class="stage-actor stage-actor-monster">
-            ${renderMonsterPlaceholder(skin, state)}
-          </div>
-        </section>
-
-        ${renderCombatInfoPanel(state)}
+        ${renderBattleStage(model)}
 
         <section class="board-zone">
           <div class="board-stage ${getShakeClass(state)} ${assetClasses(
@@ -226,58 +214,169 @@ function renderUniverseCard(
   `;
 }
 
-function renderHpBar(
+function renderBattleStage(model: GameplayViewModel): string {
+  const { state, skin } = model;
+  const playerState = getYizaiAnimationState(state, model.lastEvents);
+  const enemyState = getEnemyAnimationState(state, model.lastEvents);
+
+  return `
+    <section class="battle-stage battle-zone ${getShakeClass(
+      state,
+    )}" aria-label="battle stage">
+      <div class="battle-bg ${assetClasses(
+        skin,
+        "ft_battle_stage_bg",
+      )}" ${assetAttrs(skin, "ft_battle_stage_bg")}></div>
+      <div class="battle-character-layer">
+        <div class="player-slot ${playerStateClass(playerState)}">
+          ${renderMaeePlaceholder(skin, playerState)}
+        </div>
+        <div class="stage-vfx-lane">
+          <div class="versus-mark">VS</div>
+          <div class="stage-hit-flash ${getShakeClass(state)}"></div>
+        </div>
+        <div class="enemy-slot ${enemyStateClass(enemyState)}">
+          ${renderMonsterPlaceholder(skin, state, enemyState)}
+        </div>
+      </div>
+      <div class="battle-vfx-layer" aria-hidden="true">
+        ${renderBattleVfxFallback(state)}
+      </div>
+      <div class="battle-hud-layer combat-info-panel" aria-label="combat info">
+        ${renderBattleHpPanel(
+          skin,
+          "玩家 HP",
+          state.playerHp,
+          state.playerMaxHp,
+          "player",
+        )}
+        ${renderShieldPanel(skin, state.playerShield, state.playerMaxHp)}
+        ${renderBattleHpPanel(
+          skin,
+          state.enemyName || getEnemyDisplayName(state.enemyId),
+          state.enemyHp,
+          state.enemyMaxHp,
+          "enemy",
+        )}
+        ${renderAttackPips(
+          skin,
+          state.enemyAttackCounter,
+          state.enemyAttackInterval,
+        )}
+      </div>
+      ${renderDamageFloatLayer(state, model.lastEvents)}
+    </section>
+  `;
+}
+
+function renderBattleHpPanel(
+  skin: Match3Skin,
   label: string,
   current: number,
   max: number,
   variant: "player" | "enemy",
 ): string {
-  const percent = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
+  const percent = getPercent(current, max);
+  const fillKey: AssetKey =
+    variant === "player" ? "ui_hp_bar_player_fill" : "ui_hp_bar_enemy_fill";
+  const panelClass = variant === "player" ? "player-hp-panel" : "enemy-hp-panel";
 
   return `
-    <div class="hp-block">
+    <div class="${panelClass} hp-block">
       <div class="hp-label">
         <span>${escapeHtml(label)}</span>
-        <span>${current}/${max}</span>
+        <span>${formatNumber(current)}/${formatNumber(max)}</span>
       </div>
-      <div class="hp-track">
-        <div class="hp-fill ${variant}" style="width: ${percent}%"></div>
+      <div class="hp-track ${assetClasses(skin, "ui_hp_bar_bg")}" ${assetAttrs(
+        skin,
+        "ui_hp_bar_bg",
+      )}>
+        <div
+          class="hp-fill ${variant} ${assetClasses(skin, fillKey)}"
+          style="width: ${percent}%"
+          ${assetAttrs(skin, fillKey)}
+        ></div>
       </div>
     </div>
   `;
 }
 
-function renderAttackBar(current: number, max: number): string {
-  const percent = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
+function renderShieldPanel(
+  skin: Match3Skin,
+  shield: number,
+  playerMaxHp: number,
+): string {
+  const percent = getPercent(shield, playerMaxHp);
+  const activeClass = shield > 0 ? "shield-active" : "shield-empty";
 
   return `
-    <div class="attack-block">
+    <div class="player-shield-panel hp-block ${activeClass}">
       <div class="hp-label">
-        <span>攻击条</span>
-        <span>${current}/${max}</span>
+        <span>护盾</span>
+        <span>${formatNumber(shield)}</span>
       </div>
-      <div class="hp-track attack-track">
-        <div class="hp-fill attack" style="width: ${percent}%"></div>
+      <div class="hp-track shield-track ${assetClasses(
+        skin,
+        "ui_hp_bar_bg",
+      )}" ${assetAttrs(skin, "ui_hp_bar_bg")}>
+        <div
+          class="hp-fill shield ${assetClasses(skin, "ui_shield_bar_fill")}"
+          style="width: ${percent}%"
+          ${assetAttrs(skin, "ui_shield_bar_fill")}
+        ></div>
       </div>
     </div>
   `;
 }
 
-function renderCombatInfoPanel(state: GameplayState): string {
-  return `
-    <section class="combat-info-panel" aria-label="combat info">
-      <div class="combat-bars">
-        ${renderHpBar("玩家 HP", state.playerHp, state.playerMaxHp, "player")}
-        ${renderAttackBar(state.enemyAttackCounter, state.enemyAttackInterval)}
-        ${renderHpBar("怪物 HP", state.enemyHp, state.enemyMaxHp, "enemy")}
+function renderAttackPips(
+  skin: Match3Skin,
+  current: number,
+  max: number,
+): string {
+  if (max <= 0) {
+    return `
+      <div class="enemy-attack-pips inactive">
+        <span>攻击条</span>
+        <strong>不攻击</strong>
       </div>
-    </section>
+    `;
+  }
+
+  const safeMax = Math.max(1, Math.floor(max));
+  const safeCurrent = Math.max(0, Math.min(safeMax, Math.floor(current)));
+
+  return `
+    <div class="enemy-attack-pips" aria-label="enemy attack pips">
+      <div class="attack-pip-label">
+        <span>攻击条</span>
+        <strong>${safeCurrent}/${safeMax}</strong>
+      </div>
+      <div class="attack-pip-row">
+        ${Array.from({ length: safeMax }, (_, index) =>
+          renderAttackPip(skin, index < safeCurrent),
+        ).join("")}
+      </div>
+    </div>
   `;
 }
 
-function renderMaeePlaceholder(skin: Match3Skin, state: GameplayState): string {
-  const key = getYizaiAssetKey(state);
-  const animationState = getYizaiAnimationState(state);
+function renderAttackPip(skin: Match3Skin, active: boolean): string {
+  const key: AssetKey = active ? "ui_attack_pip_on" : "ui_attack_pip_off";
+
+  return `
+    <span
+      class="attack-pip ${active ? "on" : "off"} ${assetClasses(skin, key)}"
+      ${assetAttrs(skin, key)}
+    ></span>
+  `;
+}
+
+function renderMaeePlaceholder(
+  skin: Match3Skin,
+  animationState: HeroAnimationState,
+): string {
+  const key = getYizaiAssetKey(animationState);
   const animation = skin.animations.yizai[animationState];
 
   return `
@@ -304,8 +403,9 @@ function renderMaeePlaceholder(skin: Match3Skin, state: GameplayState): string {
 function renderMonsterPlaceholder(
   skin: Match3Skin,
   state: GameplayState,
+  animationState: EnemyAnimationState,
 ): string {
-  const key = skin.monsterAssets[state.enemyId] ?? "monster_slime_idle";
+  const key = getEnemyAssetKey(skin, state, animationState);
   const animation = skin.animations.monsters[state.enemyId];
 
   return `
@@ -316,9 +416,67 @@ function renderMonsterPlaceholder(
       animation ? animationAttrs(animation) : ""
     }>
       <span>怪物</span>
-      <strong>${escapeHtml(state.enemyName || state.enemyId)}</strong>
+      <strong>${escapeHtml(state.enemyName || getEnemyDisplayName(state.enemyId))}</strong>
     </div>
   `;
+}
+
+function renderBattleVfxFallback(state: GameplayState): string {
+  const key = getBattleVfxKey(state.lastVfxKeys);
+
+  if (!key) {
+    return "";
+  }
+
+  const presentation = getBattleVfxPresentation(key);
+
+  return `
+    <span class="battle-vfx-flash ${presentation.cssClass} battle-vfx-${presentation.tone}">
+      ${escapeHtml(presentation.label)}
+    </span>
+  `;
+}
+
+function renderDamageFloatLayer(
+  state: GameplayState,
+  events: readonly GameplayEvent[],
+): string {
+  const enemyDamage =
+    state.lastDamage > 0
+      ? `<span class="damage-float enemy-damage">-${formatNumber(
+          state.lastDamage,
+        )}</span>`
+      : "";
+  const playerDamage = getLastCombatAmount(events, "playerDamaged");
+  const playerDamageText =
+    playerDamage > 0
+      ? `<span class="damage-float player-damage">-${formatNumber(
+          playerDamage,
+        )}</span>`
+      : "";
+
+  if (!enemyDamage && !playerDamageText) {
+    return `<div class="damage-float-layer"></div>`;
+  }
+
+  return `<div class="damage-float-layer">${enemyDamage}${playerDamageText}</div>`;
+}
+
+function getLastCombatAmount(
+  events: readonly GameplayEvent[],
+  type: "enemyDamaged" | "playerDamaged",
+): number {
+  for (let index = events.length - 1; index >= 0; index--) {
+    const event = events[index];
+
+    if (event?.type !== "combat" || event.event.type !== type) {
+      continue;
+    }
+
+    return event.event.amount;
+  }
+
+  return 0;
 }
 
 function renderBoardCell(
@@ -644,28 +802,30 @@ function getUniverseCardAssetKey(id: string): AssetKey {
   }
 }
 
-function getYizaiAssetKey(state: GameplayState): AssetKey {
-  if (state.phase === "lost" || state.playerHp <= 0) {
-    return "yizai_hero_hurt";
+function getYizaiAssetKey(state: HeroAnimationState): AssetKey {
+  switch (state) {
+    case "attack":
+      return "yizai_hero_attack";
+    case "skill":
+      return "yizai_hero_skill";
+    case "ultimate":
+      return "yizai_hero_ultimate";
+    case "hurt":
+      return "yizai_hero_hurt";
+    case "idle":
+      return "yizai_hero_idle";
   }
-
-  if (state.lastSkillLevel === "ultimate") {
-    return "yizai_hero_ultimate";
-  }
-
-  if (state.lastSkillText) {
-    return "yizai_hero_skill";
-  }
-
-  if (state.lastDamage > 0) {
-    return "yizai_hero_attack";
-  }
-
-  return "yizai_hero_idle";
 }
 
-function getYizaiAnimationState(state: GameplayState): HeroAnimationState {
-  if (state.phase === "lost" || state.playerHp <= 0) {
+function getYizaiAnimationState(
+  state: GameplayState,
+  events: readonly GameplayEvent[],
+): HeroAnimationState {
+  if (
+    state.phase === "lost" ||
+    state.playerHp <= 0 ||
+    hasCombatEvent(events, "playerDamaged")
+  ) {
     return "hurt";
   }
 
@@ -673,15 +833,115 @@ function getYizaiAnimationState(state: GameplayState): HeroAnimationState {
     return "ultimate";
   }
 
-  if (state.lastSkillText) {
+  if (state.lastSkillText || getBattleVfxKey(state.lastVfxKeys)) {
     return "skill";
   }
 
-  if (state.lastDamage > 0) {
+  if (state.lastDamage > 0 || hasCombatEvent(events, "enemyDamaged")) {
     return "attack";
   }
 
   return "idle";
+}
+
+function getEnemyAnimationState(
+  state: GameplayState,
+  events: readonly GameplayEvent[],
+): EnemyAnimationState {
+  for (let index = events.length - 1; index >= 0; index--) {
+    const event = events[index];
+
+    if (event?.type !== "combat") {
+      continue;
+    }
+
+    switch (event.event.type) {
+      case "waveStarted":
+        return "idle";
+      case "enemyDefeated":
+        return "defeat";
+      case "playerDamaged":
+        return "attack";
+      case "enemyDamaged":
+        return "hit";
+      default:
+        break;
+    }
+  }
+
+  if (state.enemyHp <= 0 && (state.phase === "won" || state.phase === "playing")) {
+    return "defeat";
+  }
+
+  return "idle";
+}
+
+function getEnemyAssetKey(
+  skin: Match3Skin,
+  state: GameplayState,
+  animationState: EnemyAnimationState,
+): AssetKey {
+  if (state.enemyId === "forest-slime") {
+    switch (animationState) {
+      case "hit":
+        return "monster_slime_hit";
+      case "attack":
+        return "monster_slime_attack";
+      case "defeat":
+        return "monster_slime_defeat";
+      case "idle":
+        return "monster_slime_idle";
+    }
+  }
+
+  return skin.monsterAssets[state.enemyId] ?? "monster_slime_idle";
+}
+
+function getEnemyDisplayName(enemyId: string): string {
+  const names: Record<string, string> = {
+    "forest-slime": "森林史莱姆",
+    "pumpkin-fiend": "南瓜怪",
+    "crow-fiend": "乌鸦怪",
+    "thorn-treant": "荆棘树精",
+    "wolf-soldier": "狼兵",
+    "young-black-dragon-king": "黑龙幼王",
+  };
+
+  return names[enemyId] ?? enemyId;
+}
+
+function playerStateClass(state: HeroAnimationState): string {
+  return `yizai-state-${state}`;
+}
+
+function enemyStateClass(state: EnemyAnimationState): string {
+  return `enemy-state-${state}`;
+}
+
+function hasCombatEvent(
+  events: readonly GameplayEvent[],
+  type: CombatEventType,
+): boolean {
+  return events.some(
+    (event) => event.type === "combat" && event.event.type === type,
+  );
+}
+
+function getBattleVfxKey(keys: readonly string[]): string | undefined {
+  return keys.find(
+    (key) =>
+      !key.startsWith("screenShake:") &&
+      !key.startsWith("skillText:") &&
+      !key.startsWith("combo:"),
+  );
+}
+
+function getPercent(current: number, max: number): number {
+  if (max <= 0) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, (current / max) * 100));
 }
 
 function assetClasses(skin: Match3Skin, key: AssetKey): string {

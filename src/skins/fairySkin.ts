@@ -147,6 +147,35 @@ const fairyOverrides: Partial<
       "asset-fallback fallback-fairy fallback-monster boss-dragon-card",
     fallbackLabel: "黑龙幼王",
   },
+  ui_hp_bar_bg: {
+    fallbackClass: "asset-fallback fallback-fairy fallback-panel ui-hp-bar-bg",
+    fallbackLabel: "血条底",
+  },
+  ui_hp_bar_player_fill: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-panel ui-hp-bar-player-fill",
+    fallbackLabel: "玩家血条",
+  },
+  ui_hp_bar_enemy_fill: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-panel ui-hp-bar-enemy-fill",
+    fallbackLabel: "怪物血条",
+  },
+  ui_shield_bar_fill: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-panel ui-shield-bar-fill",
+    fallbackLabel: "护盾条",
+  },
+  ui_attack_pip_on: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-icon ui-attack-pip-on",
+    fallbackLabel: "攻击点亮",
+  },
+  ui_attack_pip_off: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-icon ui-attack-pip-off",
+    fallbackLabel: "攻击点未亮",
+  },
 };
 
 export const fairySkin: Match3Skin = {

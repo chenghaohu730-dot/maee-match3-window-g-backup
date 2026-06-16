@@ -5,11 +5,21 @@ import {
   type AssetKey,
 } from "../src/assets/assetManifest.ts";
 import type { Piece, PieceType } from "../src/core/board.ts";
-import type { GameplayState } from "../src/core/gameplayTypes.ts";
+import type { GameplayEvent, GameplayState } from "../src/core/gameplayTypes.ts";
 import { defaultSkin } from "../src/skins/defaultSkin.ts";
 import { fairySkin } from "../src/skins/fairySkin.ts";
 import { createDefaultProgress } from "../src/ui/progressionStore.ts";
 import { renderGameplayScene, renderUniverseScene } from "../src/ui/gameplayView.ts";
+
+const BATTLE_UI_ASSET_KEYS = [
+  "ft_battle_stage_bg",
+  "ui_hp_bar_bg",
+  "ui_hp_bar_player_fill",
+  "ui_hp_bar_enemy_fill",
+  "ui_shield_bar_fill",
+  "ui_attack_pip_on",
+  "ui_attack_pip_off",
+] as const satisfies readonly AssetKey[];
 
 test("defaultSkin provides fallback resources for every manifest key", () => {
   for (const key of REQUIRED_ASSET_KEYS) {
@@ -66,6 +76,97 @@ test("gameplay rendering stays on fallback when images are unavailable", () => {
   assert.equal(html.includes("data-animation-id=\"yizai_skill\""), true);
   assert.equal(html.includes("data-frame-rate=\"12\""), true);
   assert.equal(html.includes("url("), false);
+});
+
+test("battle stage resource slots render with fallback-safe UI keys", () => {
+  const html = renderGameplayScene({
+    state: {
+      ...createGameplayState(),
+      enemyAttackCounter: 2,
+      enemyAttackInterval: 4,
+    },
+    pieces: createPieces(),
+    selected: null,
+    message: "选择两个相邻棋子交换。",
+    lastEvents: [],
+    progress: createDefaultProgress(),
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: withUnavailableResources(fairySkin),
+  });
+
+  for (const key of BATTLE_UI_ASSET_KEYS) {
+    assert.equal(fairySkin.resources[key].key, key);
+    assert.equal(html.includes(`data-asset-key="${key}"`), true);
+  }
+
+  assert.equal(html.includes("battle-stage"), true);
+  assert.equal(html.includes("battle-bg"), true);
+  assert.equal(html.includes("battle-character-layer"), true);
+  assert.equal(html.includes("battle-vfx-layer"), true);
+  assert.equal(html.includes("battle-hud-layer"), true);
+  assert.equal(html.includes("player-slot"), true);
+  assert.equal(html.includes("enemy-slot"), true);
+  assert.equal(html.includes("player-hp-panel"), true);
+  assert.equal(html.includes("enemy-hp-panel"), true);
+  assert.equal(html.includes("enemy-attack-pips"), true);
+  assert.equal(html.includes("damage-float-layer"), true);
+  assert.equal(html.includes("url("), false);
+});
+
+test("attack pips follow enemy attack counter and interval", () => {
+  const html = renderGameplayScene({
+    state: {
+      ...createGameplayState(),
+      enemyAttackCounter: 2,
+      enemyAttackInterval: 4,
+    },
+    pieces: createPieces(),
+    selected: null,
+    message: "选择两个相邻棋子交换。",
+    lastEvents: [],
+    progress: createDefaultProgress(),
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: fairySkin,
+  });
+
+  assert.equal(countOccurrences(html, "attack-pip on"), 2);
+  assert.equal(countOccurrences(html, "attack-pip off"), 2);
+  assert.equal(html.includes("2/4"), true);
+});
+
+test("enemy ids map to readable monster names and combat state classes", () => {
+  const events: GameplayEvent[] = [
+    {
+      type: "combat",
+      event: { type: "enemyDamaged", amount: 12, enemyHp: 33 },
+    },
+  ];
+  const html = renderGameplayScene({
+    state: {
+      ...createGameplayState(),
+      enemyId: "pumpkin-fiend",
+      enemyName: "",
+      enemyHp: 33,
+      enemyMaxHp: 45,
+      lastDamage: 12,
+      lastVfxKeys: ["red_skill_slash"],
+    },
+    pieces: createPieces(),
+    selected: null,
+    message: "选择两个相邻棋子交换。",
+    lastEvents: events,
+    progress: createDefaultProgress(),
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: fairySkin,
+  });
+
+  assert.equal(html.includes("南瓜怪"), true);
+  assert.equal(html.includes("enemy-state-hit"), true);
+  assert.equal(html.includes("yizai-state-skill"), true);
+  assert.equal(html.includes("火焰横扫"), true);
 });
 
 test("locked universe cards still render as locked fallback entries", () => {
@@ -135,4 +236,8 @@ function createPieces(): Piece[] {
     y: Math.floor(index / 8),
     isMatched: false,
   }));
+}
+
+function countOccurrences(value: string, pattern: string): number {
+  return value.split(pattern).length - 1;
 }

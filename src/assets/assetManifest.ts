@@ -44,6 +44,13 @@ export const ASSET_MANIFEST = {
   monster_wolf_idle: "/assets/fairy/monsters/monster_wolf_idle.png",
   boss_dragon_idle: "/assets/fairy/monsters/boss_dragon_idle.png",
 
+  ui_hp_bar_bg: "/assets/fairy/ui/ui_hp_bar_bg.png",
+  ui_hp_bar_player_fill: "/assets/fairy/ui/ui_hp_bar_player_fill.png",
+  ui_hp_bar_enemy_fill: "/assets/fairy/ui/ui_hp_bar_enemy_fill.png",
+  ui_shield_bar_fill: "/assets/fairy/ui/ui_shield_bar_fill.png",
+  ui_attack_pip_on: "/assets/fairy/ui/ui_attack_pip_on.png",
+  ui_attack_pip_off: "/assets/fairy/ui/ui_attack_pip_off.png",
+
   vfx_red_skill_slash: "/assets/fairy/vfx/vfx_red_skill_slash.png",
   vfx_blue_skill_freeze: "/assets/fairy/vfx/vfx_blue_skill_freeze.png",
   vfx_yellow_skill_chain: "/assets/fairy/vfx/vfx_yellow_skill_chain.png",

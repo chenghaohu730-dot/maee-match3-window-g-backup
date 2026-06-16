@@ -292,11 +292,9 @@ export function mountSkillVfxLayer(
     return null;
   }
 
-  const wrapper = document.createElement("div");
-  wrapper.innerHTML = renderSkillVfxLayer(input).trim();
-  const layer = wrapper.firstElementChild;
+  const layer = createSkillVfxElement(input);
 
-  if (!(layer instanceof HTMLElement)) {
+  if (!layer) {
     return null;
   }
 
@@ -319,21 +317,36 @@ export function mountSkillVfxLayer(
   ];
   const battleZone = root.querySelector<HTMLElement>(".battle-zone");
   const combatPanel = root.querySelector<HTMLElement>(".combat-info-panel");
+  const battleVfxLayer = root.querySelector<HTMLElement>(".battle-vfx-layer");
+  const battleLayer = battleVfxLayer ? createSkillVfxElement(input) : null;
 
   stage.classList.add(...boardClasses);
   battleZone?.classList.add(...battleClasses);
   combatPanel?.classList.add(...combatClasses);
   stage.append(layer);
+  if (battleLayer) {
+    battleLayer.classList.add("battle-skill-vfx-layer");
+    battleVfxLayer?.append(battleLayer);
+  }
 
   return {
     durationMs: model.presentation.durationMs,
     cleanup: () => {
       layer.remove();
+      battleLayer?.remove();
       stage.classList.remove(...boardClasses);
       battleZone?.classList.remove(...battleClasses);
       combatPanel?.classList.remove(...combatClasses);
     },
   };
+}
+
+function createSkillVfxElement(input: SkillVfxLayerInput): HTMLElement | null {
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = renderSkillVfxLayer(input).trim();
+  const layer = wrapper.firstElementChild;
+
+  return layer instanceof HTMLElement ? layer : null;
 }
 
 function getBattleVfxKey(keys: readonly string[]): string | undefined {

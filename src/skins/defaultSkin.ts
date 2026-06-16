@@ -203,6 +203,14 @@ function fallbackKindForKey(key: AssetKey): FallbackKind {
     return "vfx";
   }
 
+  if (key.startsWith("ui_attack_pip")) {
+    return "icon";
+  }
+
+  if (key.startsWith("ui_")) {
+    return "panel";
+  }
+
   if (key.includes("panel") || key.includes("modal")) {
     return "panel";
   }
@@ -255,6 +263,12 @@ function fallbackLabelForKey(key: AssetKey): string {
     monster_tree_idle: "荆棘树精",
     monster_wolf_idle: "狼兵",
     boss_dragon_idle: "黑龙幼王",
+    ui_hp_bar_bg: "血条底",
+    ui_hp_bar_player_fill: "玩家血条",
+    ui_hp_bar_enemy_fill: "怪物血条",
+    ui_shield_bar_fill: "护盾条",
+    ui_attack_pip_on: "攻击点亮",
+    ui_attack_pip_off: "攻击点未亮",
     vfx_red_skill_slash: "火焰斩",
     vfx_blue_skill_freeze: "冰霜冻结",
     vfx_yellow_skill_chain: "星光连锁",
