@@ -36,6 +36,10 @@ import {
 } from "./gameplayView.ts";
 import { mountSkillVfxLayer } from "./skillVfxLayer.ts";
 import type { SkillVfxLayerInput } from "./skillVfxTypes.ts";
+import {
+  mountCharacterAnimators,
+  type CharacterAnimationMount,
+} from "./characterAnimator.ts";
 
 export function mountGameApp(root: HTMLDivElement): void {
   const controller = new GameplayController();
@@ -49,9 +53,13 @@ export function mountGameApp(root: HTMLDivElement): void {
   let soundEnabled = true;
   let vibrationEnabled = true;
   let activeGameplaySkin: Match3Skin = fairySkin;
+  let characterAnimationMount: CharacterAnimationMount | null = null;
   const boardLock = new BoardInteractionLock();
 
   function render(): void {
+    characterAnimationMount?.cleanup();
+    characterAnimationMount = null;
+
     const state = controller.getState();
 
     if (scene === "start") {
@@ -84,6 +92,12 @@ export function mountGameApp(root: HTMLDivElement): void {
     }
 
     bindEvents();
+
+    if (scene === "gameplay") {
+      characterAnimationMount = mountCharacterAnimators(root, activeGameplaySkin, {
+        eventTarget: root,
+      });
+    }
   }
 
   function bindEvents(): void {

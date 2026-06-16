@@ -104,6 +104,50 @@ const fairyOverrides: Partial<
     fallbackClass: "asset-fallback fallback-fairy fallback-hero yizai-hero-idle",
     fallbackLabel: "亿仔勇者",
   },
+  yizai_hero_attack: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-attack",
+    fallbackLabel: "亿仔攻击",
+  },
+  yizai_hero_skill: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-skill",
+    fallbackLabel: "亿仔技能",
+  },
+  yizai_hero_ultimate: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-ultimate",
+    fallbackLabel: "亿仔大招",
+  },
+  yizai_hero_hurt: {
+    fallbackClass: "asset-fallback fallback-fairy fallback-hero yizai-hero-hurt",
+    fallbackLabel: "亿仔受击",
+  },
+  yizai_hero_idle_sheet: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-idle-sheet",
+    fallbackLabel: "亿仔待机序列帧",
+  },
+  yizai_hero_attack_sheet: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-attack-sheet",
+    fallbackLabel: "亿仔攻击序列帧",
+  },
+  yizai_hero_skill_sheet: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-skill-sheet",
+    fallbackLabel: "亿仔技能序列帧",
+  },
+  yizai_hero_ultimate_sheet: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-ultimate-sheet",
+    fallbackLabel: "亿仔大招序列帧",
+  },
+  yizai_hero_hurt_sheet: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-hurt-sheet",
+    fallbackLabel: "亿仔受击序列帧",
+  },
   monster_slime_idle: {
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-slime-card",
@@ -123,6 +167,26 @@ const fairyOverrides: Partial<
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-slime-card",
     fallbackLabel: "森林史莱姆退场",
+  },
+  monster_slime_idle_sheet: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-slime-sheet",
+    fallbackLabel: "森林史莱姆待机序列帧",
+  },
+  monster_slime_hit_sheet: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-slime-sheet",
+    fallbackLabel: "森林史莱姆受击序列帧",
+  },
+  monster_slime_attack_sheet: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-slime-sheet",
+    fallbackLabel: "森林史莱姆攻击序列帧",
+  },
+  monster_slime_defeat_sheet: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-slime-sheet",
+    fallbackLabel: "森林史莱姆退场序列帧",
   },
   monster_pumpkin_idle: {
     fallbackClass:

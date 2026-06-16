@@ -3,7 +3,6 @@ import type { GameplayEvent, GameplayState } from "../core/gameplayTypes.ts";
 import {
   getSkinResource,
   hasImageResource,
-  type HeroAnimationState,
   type Match3Skin,
   type SkinAnimation,
 } from "../skins/skinTypes.ts";
@@ -17,6 +16,20 @@ import {
   getScreenShakeClassFromKeys,
   getSkillDisplayText,
 } from "./skillVfxLayer.ts";
+import {
+  getCharacterAnimationConfig,
+  getCharacterAnchors,
+} from "./characterAnimationConfig.ts";
+import { resolveCharacterAnimationSource } from "./characterAnimator.ts";
+import type {
+  CharacterAnchorConfig,
+  CharacterAnimationSnapshot,
+  CharacterId,
+  EnemyAnimationState,
+  SpriteAnimationConfig,
+  YizaiAnimationState,
+} from "./characterAnimationTypes.ts";
+import { createCharacterAnimationSnapshot } from "./characterStateMachine.ts";
 
 export interface GameplayViewModel {
   state: GameplayState;
@@ -28,6 +41,7 @@ export interface GameplayViewModel {
   soundEnabled: boolean;
   vibrationEnabled: boolean;
   skin: Match3Skin;
+  characterAnimations?: CharacterAnimationSnapshot;
 }
 
 export interface StartSceneViewModel {
@@ -44,9 +58,6 @@ export interface UniverseSceneViewModel {
   skin: Match3Skin;
   fairySkin: Match3Skin;
 }
-
-type EnemyAnimationState = "idle" | "hit" | "attack" | "defeat";
-type CombatEventType = Extract<GameplayEvent, { type: "combat" }>["event"]["type"];
 
 export function renderStartScene(model: StartSceneViewModel): string {
   const { skin } = model;
@@ -215,8 +226,11 @@ function renderUniverseCard(
 
 function renderBattleStage(model: GameplayViewModel): string {
   const { state, skin } = model;
-  const playerState = getYizaiAnimationState(state, model.lastEvents);
-  const enemyState = getEnemyAnimationState(state, model.lastEvents);
+  const characterAnimations =
+    model.characterAnimations ??
+    createCharacterAnimationSnapshot(state, model.lastEvents);
+  const playerState = characterAnimations.yizai;
+  const enemyState = characterAnimations.enemy;
 
   return `
     <section class="battle-stage battle-zone ${getShakeClass(
@@ -228,14 +242,14 @@ function renderBattleStage(model: GameplayViewModel): string {
       )}" ${assetAttrs(skin, "ft_battle_stage_bg")}></div>
       <div class="battle-character-layer">
         <div class="player-slot ${playerStateClass(playerState)}">
-          ${renderMaeePlaceholder(skin, playerState)}
+          ${renderYizaiCharacter(skin, playerState)}
         </div>
         <div class="stage-vfx-lane">
           <div class="versus-mark">VS</div>
           <div class="stage-hit-flash ${getShakeClass(state)}"></div>
         </div>
         <div class="enemy-slot ${enemyStateClass(enemyState)}">
-          ${renderMonsterPlaceholder(skin, state, enemyState)}
+          ${renderEnemyCharacter(skin, state, enemyState)}
         </div>
       </div>
       <div class="battle-vfx-layer" aria-hidden="true">
@@ -371,21 +385,30 @@ function renderAttackPip(skin: Match3Skin, active: boolean): string {
   `;
 }
 
-function renderMaeePlaceholder(
+function renderYizaiCharacter(
   skin: Match3Skin,
-  animationState: HeroAnimationState,
+  animationState: YizaiAnimationState,
 ): string {
-  const key = getYizaiAssetKey(animationState);
+  const config = getCharacterAnimationConfig("yizai", animationState);
+  const key = getRenderAssetKey(config, skin);
   const animation = skin.animations.yizai[animationState];
 
   return `
-    <div class="maee-placeholder ${assetClasses(
+    <div class="maee-placeholder character-sprite ${assetClasses(
       skin,
       key,
-    )} ${animation.fallbackClass}" aria-label="亿仔占位" ${assetAttrs(
+    )} ${animation.fallbackClass} ${characterFallbackClass(
+      animationState,
+    )}" aria-label="亿仔占位" ${assetAttrs(
       skin,
       key,
-    )} ${animationAttrs(animation)}>
+    )} ${characterAnimationAttrs(
+      "yizai",
+      animationState,
+      config,
+      animation.id,
+      getCharacterAnchors("yizai"),
+    )}>
       <div class="maee-art-fallback">
         <div class="maee-headband">MAEE</div>
         <div class="maee-brow left"></div>
@@ -399,21 +422,28 @@ function renderMaeePlaceholder(
   `;
 }
 
-function renderMonsterPlaceholder(
+function renderEnemyCharacter(
   skin: Match3Skin,
   state: GameplayState,
   animationState: EnemyAnimationState,
 ): string {
-  const key = getEnemyAssetKey(skin, state, animationState);
+  const config = getCharacterAnimationConfig("enemy", animationState);
+  const key = getEnemyRenderAssetKey(skin, state, animationState, config);
   const animation = skin.animations.monsters[state.enemyId];
 
   return `
-    <div class="monster-placeholder ${assetClasses(
+    <div class="monster-placeholder character-sprite ${assetClasses(
       skin,
       key,
-    )} ${animation?.fallbackClass ?? ""}" ${assetAttrs(skin, key)} ${
-      animation ? animationAttrs(animation) : ""
-    }>
+    )} ${animation?.fallbackClass ?? ""} ${characterFallbackClass(
+      animationState,
+    )}" ${assetAttrs(skin, key)} ${characterAnimationAttrs(
+      "enemy",
+      animationState,
+      config,
+      `enemy_${animationState}`,
+      getCharacterAnchors("enemy"),
+    )}>
       <span>怪物</span>
       <strong>${escapeHtml(state.enemyName || getEnemyDisplayName(state.enemyId))}</strong>
     </div>
@@ -803,96 +833,25 @@ function getUniverseCardAssetKey(id: string): AssetKey {
   }
 }
 
-function getYizaiAssetKey(state: HeroAnimationState): AssetKey {
-  switch (state) {
-    case "attack":
-      return "yizai_hero_attack";
-    case "skill":
-      return "yizai_hero_skill";
-    case "ultimate":
-      return "yizai_hero_ultimate";
-    case "hurt":
-      return "yizai_hero_hurt";
-    case "idle":
-      return "yizai_hero_idle";
-  }
+function getRenderAssetKey(
+  config: SpriteAnimationConfig,
+  skin: Match3Skin,
+): AssetKey {
+  return resolveCharacterAnimationSource(config, skin).key;
 }
 
-function getYizaiAnimationState(
-  state: GameplayState,
-  events: readonly GameplayEvent[],
-): HeroAnimationState {
-  if (
-    state.phase === "lost" ||
-    state.playerHp <= 0 ||
-    hasCombatEvent(events, "playerDamaged")
-  ) {
-    return "hurt";
-  }
-
-  if (state.lastSkillLevel === "ultimate") {
-    return "ultimate";
-  }
-
-  if (state.lastSkillText || getBattleVfxKey(state.lastVfxKeys)) {
-    return "skill";
-  }
-
-  if (state.lastDamage > 0 || hasCombatEvent(events, "enemyDamaged")) {
-    return "attack";
-  }
-
-  return "idle";
-}
-
-function getEnemyAnimationState(
-  state: GameplayState,
-  events: readonly GameplayEvent[],
-): EnemyAnimationState {
-  for (let index = events.length - 1; index >= 0; index--) {
-    const event = events[index];
-
-    if (event?.type !== "combat") {
-      continue;
-    }
-
-    switch (event.event.type) {
-      case "waveStarted":
-        return "idle";
-      case "enemyDefeated":
-        return "defeat";
-      case "playerDamaged":
-        return "attack";
-      case "enemyDamaged":
-        return "hit";
-      default:
-        break;
-    }
-  }
-
-  if (state.enemyHp <= 0 && (state.phase === "won" || state.phase === "playing")) {
-    return "defeat";
-  }
-
-  return "idle";
-}
-
-function getEnemyAssetKey(
+function getEnemyRenderAssetKey(
   skin: Match3Skin,
   state: GameplayState,
   animationState: EnemyAnimationState,
+  config: SpriteAnimationConfig,
 ): AssetKey {
   if (state.enemyId === "forest-slime") {
-    switch (animationState) {
-      case "hit":
-        return "monster_slime_hit";
-      case "attack":
-        return "monster_slime_attack";
-      case "defeat":
-        return "monster_slime_defeat";
-      case "idle":
-        return "monster_slime_idle";
-    }
+    return getRenderAssetKey(config, skin);
+  }
+
+  if (animationState !== "idle") {
+    return getRenderAssetKey(config, skin);
   }
 
   return skin.monsterAssets[state.enemyId] ?? "monster_slime_idle";
@@ -911,21 +870,12 @@ function getEnemyDisplayName(enemyId: string): string {
   return names[enemyId] ?? enemyId;
 }
 
-function playerStateClass(state: HeroAnimationState): string {
+function playerStateClass(state: YizaiAnimationState): string {
   return `yizai-state-${state}`;
 }
 
 function enemyStateClass(state: EnemyAnimationState): string {
   return `enemy-state-${state}`;
-}
-
-function hasCombatEvent(
-  events: readonly GameplayEvent[],
-  type: CombatEventType,
-): boolean {
-  return events.some(
-    (event) => event.type === "combat" && event.event.type === type,
-  );
 }
 
 function getBattleVfxKey(keys: readonly string[]): string | undefined {
@@ -968,6 +918,50 @@ function animationAttrs(animation: SkinAnimation): string {
   ].join(" ");
 }
 
+function characterAnimationAttrs(
+  characterId: CharacterId,
+  state: string,
+  config: SpriteAnimationConfig,
+  animationId: string,
+  anchors: CharacterAnchorConfig,
+): string {
+  const attrs = [
+    `data-character-id="${characterId}"`,
+    `data-animation-state="${escapeHtml(state)}"`,
+    `data-animation-id="${escapeHtml(animationId)}"`,
+    `data-frame-rate="${config.fps}"`,
+    `data-animation-loop="${config.loop ? "true" : "false"}"`,
+    `data-frame-width="${config.frameWidth}"`,
+    `data-frame-height="${config.frameHeight}"`,
+    `data-frame-count="${config.frameCount}"`,
+    `data-sprite-key="${escapeHtml(config.key)}"`,
+  ];
+
+  if (config.fallbackKey) {
+    attrs.push(`data-fallback-key="${escapeHtml(config.fallbackKey)}"`);
+  }
+
+  if (config.returnTo) {
+    attrs.push(`data-return-to="${escapeHtml(config.returnTo)}"`);
+  }
+
+  for (const [name, point] of Object.entries(anchors)) {
+    if (!point) {
+      continue;
+    }
+
+    const key = toKebab(name);
+    attrs.push(`data-anchor-${key}-x="${point.x}"`);
+    attrs.push(`data-anchor-${key}-y="${point.y}"`);
+  }
+
+  return attrs.join(" ");
+}
+
+function characterFallbackClass(state: string): string {
+  return `character-fallback-${state}`;
+}
+
 function renderLayoutVars(): string {
   return [
     `--canvas-width: ${PHONE_LAYOUT.canvas.width}`,
@@ -991,4 +985,8 @@ function escapeHtml(value: string): string {
 
 function escapeAttribute(value: string): string {
   return escapeHtml(value).replaceAll("'", "&#39;");
+}
+
+function toKebab(value: string): string {
+  return value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`);
 }
