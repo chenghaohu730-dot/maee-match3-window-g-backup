@@ -46,6 +46,18 @@ const FORMAL_PIECE_KEYS = [
   "piece_orange_courage",
 ] as const satisfies readonly AssetKey[];
 
+const FORMAL_BOARD_KEYS = [
+  "ft_board_frame",
+  "ft_board_bg",
+  "ft_grid_cell",
+  "ft_grid_cell_highlight",
+] as const satisfies readonly AssetKey[];
+
+const FORMAL_READY_KEYS = [
+  ...FORMAL_PIECE_KEYS,
+  ...FORMAL_BOARD_KEYS,
+] as const satisfies readonly AssetKey[];
+
 test("fairySkin has paths for every first-batch fairy MVP asset", () => {
   for (const [key, expectedPath] of FAIRY_MVP_ASSETS) {
     const resource = fairySkin.resources[key];
@@ -93,9 +105,37 @@ test("formal fairy piece images render by default", () => {
   );
 });
 
+test("formal fairy board images render by default", () => {
+  for (const key of FORMAL_BOARD_KEYS) {
+    const resource = fairySkin.resources[key];
+
+    assert.equal(resource.available, true);
+    assert.equal(hasImageResource(resource), true);
+  }
+
+  const html = renderGameplayScene(createGameplayModel(fairySkin));
+
+  assert.equal(
+    html.includes("url('/assets/fairy/board/ft_board_frame.png')"),
+    true,
+  );
+  assert.equal(
+    html.includes("url('/assets/fairy/board/ft_board_bg.png')"),
+    true,
+  );
+  assert.equal(
+    html.includes("url('/assets/fairy/board/ft_grid_cell.png')"),
+    true,
+  );
+  assert.equal(
+    html.includes("url('/assets/fairy/board/ft_grid_cell_highlight.png')"),
+    true,
+  );
+});
+
 test("missing non-piece first-batch fairy MVP images stay on fallback", () => {
   for (const [key] of FAIRY_MVP_ASSETS) {
-    if (isFormalPieceKey(key)) {
+    if (isFormalReadyKey(key)) {
       continue;
     }
 
@@ -172,8 +212,8 @@ function withAvailableResources(
   };
 }
 
-function isFormalPieceKey(key: AssetKey): boolean {
-  return (FORMAL_PIECE_KEYS as readonly AssetKey[]).includes(key);
+function isFormalReadyKey(key: AssetKey): boolean {
+  return (FORMAL_READY_KEYS as readonly AssetKey[]).includes(key);
 }
 
 function createGameplayModel(skin: Match3Skin) {

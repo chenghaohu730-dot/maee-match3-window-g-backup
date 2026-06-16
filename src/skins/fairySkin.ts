@@ -42,19 +42,23 @@ const fairyOverrides: Partial<
     fallbackLabel: "童话战斗舞台",
   },
   ft_board_frame: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-panel fairy-board-frame",
     fallbackLabel: "童话棋盘框",
   },
   ft_board_bg: {
+    available: true,
     fallbackClass: "asset-fallback fallback-fairy fallback-panel fairy-board-bg",
     fallbackLabel: "童话棋盘底",
   },
   ft_grid_cell: {
+    available: true,
     fallbackClass: "asset-fallback fallback-fairy fallback-cell fairy-grid-cell",
     fallbackLabel: "童话棋格",
   },
   ft_grid_cell_highlight: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-cell fairy-grid-cell-highlight",
     fallbackLabel: "童话棋格高亮",

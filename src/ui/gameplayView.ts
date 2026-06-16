@@ -171,7 +171,9 @@ export function renderGameplayScene(model: GameplayViewModel): string {
               "ft_board_bg",
             )}" aria-label="8 by 8 match board" ${assetAttrs(skin, "ft_board_bg")}>
               ${model.pieces
-                .map((piece) => renderPiece(piece, model.selected, skin))
+                .map((piece, index) =>
+                  renderBoardCell(piece, index, model.selected, skin),
+                )
                 .join("")}
             </div>
             ${renderBoardFeedback(state)}
@@ -180,15 +182,9 @@ export function renderGameplayScene(model: GameplayViewModel): string {
         </section>
 
         <footer class="bottom-status">
-          <div class="bottom-status-line">
-            <span>当前积分 ${model.progress.totalPoints}</span>
-            <p>${escapeHtml(model.message)}</p>
-            <span>护盾 ${state.playerShield}</span>
-          </div>
-          <div class="bottom-actions">
-            <span>${escapeHtml(formatEventSummary(model.lastEvents))}</span>
-            <button class="secondary-button compact" type="button" data-action="return-universe">返回宇宙</button>
-          </div>
+          <div class="bottom-shield">护盾 ${state.playerShield}</div>
+          <div class="bottom-score">当前积分 ${model.progress.totalPoints}</div>
+          <button class="secondary-button compact" type="button" data-action="return-universe">返回宇宙</button>
         </footer>
       </div>
 
@@ -268,22 +264,8 @@ function renderCombatInfoPanel(state: GameplayState): string {
     <section class="combat-info-panel" aria-label="combat info">
       <div class="combat-bars">
         ${renderHpBar("玩家 HP", state.playerHp, state.playerMaxHp, "player")}
-        ${renderHpBar("怪物 HP", state.enemyHp, state.enemyMaxHp, "enemy")}
         ${renderAttackBar(state.enemyAttackCounter, state.enemyAttackInterval)}
-      </div>
-      <div class="skill-strip" aria-label="recent skill output">
-        <div>
-          <span>最近技能</span>
-          <strong>${escapeHtml(state.lastSkillText ?? "无")}</strong>
-        </div>
-        <div>
-          <span>Combo</span>
-          <strong>${state.lastComboCount}</strong>
-        </div>
-        <div>
-          <span>伤害</span>
-          <strong>${formatNumber(state.lastDamage)}</strong>
-        </div>
+        ${renderHpBar("怪物 HP", state.enemyHp, state.enemyMaxHp, "enemy")}
       </div>
     </section>
   `;
@@ -335,25 +317,43 @@ function renderMonsterPlaceholder(
   `;
 }
 
-function renderPiece(
+function renderBoardCell(
   piece: Piece | null,
+  index: number,
   selected: MatchCell | null,
   skin: Match3Skin,
 ): string {
-  if (!piece) {
-    return `<div class="cell empty ${assetClasses(
-      skin,
-      "ft_grid_cell",
-    )}" ${assetAttrs(skin, "ft_grid_cell")}></div>`;
-  }
+  const x = piece?.x ?? index % PHONE_LAYOUT.board.columns;
+  const y = piece?.y ?? Math.floor(index / PHONE_LAYOUT.board.columns);
+  const isSelected = selected?.x === x && selected.y === y;
+  const cellAssetKey = isSelected ? "ft_grid_cell_highlight" : "ft_grid_cell";
 
-  const isSelected =
-    selected?.x === piece.x && selected.y === piece.y ? " selected" : "";
+  return `
+    <div
+      class="board-cell${isSelected ? " selected" : ""}${piece ? "" : " empty-cell"} ${assetClasses(
+        skin,
+        cellAssetKey,
+      )}"
+      data-cell-x="${x}"
+      data-cell-y="${y}"
+      ${assetAttrs(skin, cellAssetKey)}
+    >
+      ${piece ? renderPiece(piece, isSelected, skin) : ""}
+    </div>
+  `;
+}
+
+function renderPiece(
+  piece: Piece,
+  isSelected: boolean,
+  skin: Match3Skin,
+): string {
+  const selectedClass = isSelected ? " selected" : "";
   const assetKey = skin.pieceAssets[piece.type];
 
   return `
     <button
-      class="piece type-${piece.type}${isSelected} ${assetClasses(
+      class="piece type-${piece.type}${selectedClass} ${assetClasses(
         skin,
         assetKey,
       )}"
