@@ -1,5 +1,5 @@
 import type { AssetKey } from "../assets/assetManifest.ts";
-import type { Match3Skin } from "./skinTypes.ts";
+import type { Match3Skin, SkinResource } from "./skinTypes.ts";
 import {
   MONSTER_ASSETS,
   PIECE_ASSETS,
@@ -9,7 +9,7 @@ import {
 } from "./defaultSkin.ts";
 
 const fairyOverrides: Partial<
-  Record<AssetKey, { fallbackClass: string; fallbackLabel: string }>
+  Record<AssetKey, Partial<Omit<SkinResource, "key">>>
 > = {
   home_bg: {
     fallbackClass:
@@ -60,30 +60,36 @@ const fairyOverrides: Partial<
     fallbackLabel: "童话棋格高亮",
   },
   piece_red_flame: {
+    available: true,
     fallbackClass: "asset-fallback fallback-fairy fallback-piece piece-red-flame",
     fallbackLabel: "火焰",
   },
   piece_blue_frost: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-piece piece-blue-frost",
     fallbackLabel: "冰霜",
   },
   piece_yellow_star: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-piece piece-yellow-star",
     fallbackLabel: "星光",
   },
   piece_green_nature: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-piece piece-green-nature",
     fallbackLabel: "自然",
   },
   piece_purple_arcane: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-piece piece-purple-arcane",
     fallbackLabel: "奥术",
   },
   piece_orange_courage: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-piece piece-orange-courage",
     fallbackLabel: "勇气",

@@ -803,6 +803,13 @@ p {
   display: none;
 }
 
+.piece.has-image {
+  overflow: visible;
+  background-color: transparent;
+  background-size: contain;
+  box-shadow: none;
+}
+
 .empty {
   border-radius: 8px;
   background:

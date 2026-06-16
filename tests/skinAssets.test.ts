@@ -46,6 +46,7 @@ test("fairySkin covers all required resources, pieces, monsters, and vfx", () =>
 });
 
 test("gameplay rendering stays on fallback when images are unavailable", () => {
+  const unavailableFairySkin = withUnavailableResources(fairySkin);
   const html = renderGameplayScene({
     state: createGameplayState(),
     pieces: createPieces(),
@@ -55,7 +56,7 @@ test("gameplay rendering stays on fallback when images are unavailable", () => {
     progress: createDefaultProgress(),
     soundEnabled: true,
     vibrationEnabled: true,
-    skin: fairySkin,
+    skin: unavailableFairySkin,
   });
 
   assert.equal(html.includes("data-asset-key=\"ft_gameplay_bg\""), true);
@@ -87,8 +88,19 @@ function assertAssetKeys(keys: AssetKey[]): void {
 
   for (const key of keys) {
     assert.equal(required.has(key), true);
-    assert.equal(fairySkin.resources[key].available, false);
   }
+}
+
+function withUnavailableResources(skin: typeof fairySkin): typeof fairySkin {
+  return {
+    ...skin,
+    resources: Object.fromEntries(
+      Object.entries(skin.resources).map(([key, resource]) => [
+        key,
+        { ...resource, available: false },
+      ]),
+    ) as typeof skin.resources,
+  };
 }
 
 function createGameplayState(): GameplayState {

@@ -37,6 +37,15 @@ const FAIRY_MVP_ASSETS = [
   ["monster_slime_defeat", "/assets/fairy/monsters/monster_slime_defeat.png"],
 ] as const satisfies readonly (readonly [AssetKey, string])[];
 
+const FORMAL_PIECE_KEYS = [
+  "piece_red_flame",
+  "piece_blue_frost",
+  "piece_yellow_star",
+  "piece_green_nature",
+  "piece_purple_arcane",
+  "piece_orange_courage",
+] as const satisfies readonly AssetKey[];
+
 test("fairySkin has paths for every first-batch fairy MVP asset", () => {
   for (const [key, expectedPath] of FAIRY_MVP_ASSETS) {
     const resource = fairySkin.resources[key];
@@ -64,8 +73,32 @@ test("first-batch fairy MVP paths resolve inside public assets", () => {
   }
 });
 
-test("missing first-batch fairy MVP images stay on fallback", () => {
+test("formal fairy piece images render by default", () => {
+  for (const key of FORMAL_PIECE_KEYS) {
+    const resource = fairySkin.resources[key];
+
+    assert.equal(resource.available, true);
+    assert.equal(hasImageResource(resource), true);
+  }
+
+  const html = renderGameplayScene(createGameplayModel(fairySkin));
+
+  assert.equal(
+    html.includes("url('/assets/fairy/pieces/piece_red_flame.png')"),
+    true,
+  );
+  assert.equal(
+    html.includes("url('/assets/fairy/pieces/piece_orange_courage.png')"),
+    true,
+  );
+});
+
+test("missing non-piece first-batch fairy MVP images stay on fallback", () => {
   for (const [key] of FAIRY_MVP_ASSETS) {
+    if (isFormalPieceKey(key)) {
+      continue;
+    }
+
     const resource = fairySkin.resources[key];
 
     assert.equal(resource.available, false);
@@ -75,7 +108,10 @@ test("missing first-batch fairy MVP images stay on fallback", () => {
   const html = renderGameplayScene(createGameplayModel(fairySkin));
 
   assert.equal(html.includes("uses-fallback"), true);
-  assert.equal(html.includes("url("), false);
+  assert.equal(
+    html.includes("url('/assets/fairy/backgrounds/ft_gameplay_bg.png')"),
+    false,
+  );
   assert.equal(html.includes("MAEE"), true);
   assert.equal(html.includes("data-asset-key=\"ft_gameplay_bg\""), true);
   assert.equal(html.includes("data-asset-key=\"monster_slime_idle\""), true);
@@ -134,6 +170,10 @@ function withAvailableResources(
     ...skin,
     resources,
   };
+}
+
+function isFormalPieceKey(key: AssetKey): boolean {
+  return (FORMAL_PIECE_KEYS as readonly AssetKey[]).includes(key);
 }
 
 function createGameplayModel(skin: Match3Skin) {
