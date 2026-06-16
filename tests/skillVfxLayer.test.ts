@@ -22,9 +22,9 @@ import {
 const RED: PieceType = 0;
 const PURPLE: PieceType = 4;
 
-const stableTypes: PieceType[][] = [
-  [0, 1, 2, 3, 4, 5, 0, 1],
-  [1, 2, 3, 4, 5, 0, 1, 2],
+const playableTypes: PieceType[][] = [
+  [0, 1, 0, 2, 3, 4, 5, 1],
+  [2, 0, 3, 4, 5, 0, 1, 2],
   [2, 3, 4, 5, 0, 1, 2, 3],
   [3, 4, 5, 0, 1, 2, 3, 4],
   [4, 5, 0, 1, 2, 3, 4, 5],
@@ -122,7 +122,7 @@ test("screen shake intensity maps small, medium, and large classes", () => {
 
 test("skill vfx rendering does not mutate board, combat, or skill results", () => {
   const controller = new GameplayController({
-    initialTypes: stableTypes,
+    initialTypes: playableTypes,
     rng: fixedRng(0.73),
     waves: [wave("training", 300, 0, 0)],
   });

@@ -18,6 +18,17 @@ const stableTypes: PieceType[][] = [
   [1, 2, 3, 4, 5, 0, 1, 2],
 ];
 
+const playableTypes: PieceType[][] = [
+  [0, 1, 0, 2, 3, 4, 5, 1],
+  [2, 0, 3, 4, 5, 0, 1, 2],
+  [2, 3, 4, 5, 0, 1, 2, 3],
+  [3, 4, 5, 0, 1, 2, 3, 4],
+  [4, 5, 0, 1, 2, 3, 4, 5],
+  [5, 0, 1, 2, 3, 4, 5, 0],
+  [0, 1, 2, 3, 4, 5, 0, 1],
+  [1, 2, 3, 4, 5, 0, 1, 2],
+];
+
 test("createBoardAnimationPlan identifies moved pieces", () => {
   const before = snapshots([
     ["a", 0, 0],
@@ -81,7 +92,7 @@ test("invalid swap does not trigger resolve or combat progress", () => {
   assert.equal(resolveCount, 0);
 
   const controller = new GameplayController({
-    initialTypes: stableTypes,
+    initialTypes: playableTypes,
     rng: fixedRng(0.73),
     waves: [wave("counter-test", 100, 1, 10)],
   });

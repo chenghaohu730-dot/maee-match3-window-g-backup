@@ -48,6 +48,7 @@ export interface ResolveSummary {
   wasPlayerMove: boolean;
   groups?: MatchGroup[];
   maxMatchLength?: number;
+  boardWasReshuffled?: boolean;
 }
 
 export interface BoardOptions {
@@ -64,6 +65,8 @@ type LineOrientation = Extract<MatchGroup["orientation"], "row" | "col">;
 type SwapFailureReason = NonNullable<SwapResult["reason"]>;
 
 const PIECE_TYPES: PieceType[] = [0, 1, 2, 3, 4, 5];
+const MAX_SHUFFLE_ATTEMPTS = 64;
+const MAX_REGENERATE_ATTEMPTS = 32;
 const GUARANTEED_PLAYABLE_TYPES: PieceType[][] = [
   [0, 1, 0, 2, 3, 4, 5, 1],
   [2, 0, 3, 4, 5, 0, 1, 2],
@@ -127,7 +130,12 @@ export class Board {
 
   resolve(wasPlayerMove = false): ClearEvent[] {
     const result = this.resolveMatches(wasPlayerMove);
-    this.onResolveComplete?.(result.summary);
+    const boardWasReshuffled = this.ensurePlayableBoard();
+    const summary = boardWasReshuffled
+      ? { ...result.summary, boardWasReshuffled: true }
+      : result.summary;
+
+    this.onResolveComplete?.(summary);
     return result.clearEvents;
   }
 
@@ -138,8 +146,13 @@ export class Board {
     const clearEvents: ClearEvent[] = [];
 
     if (effectPieces.length === 0) {
-      this.ensurePlayableBoard();
-      return this.createResolveSummary(clearEvents, false, []);
+      const boardWasReshuffled = this.ensurePlayableBoard();
+      return this.createResolveSummary(
+        clearEvents,
+        false,
+        [],
+        boardWasReshuffled,
+      );
     }
 
     const effectEvent: ClearEvent = {
@@ -155,21 +168,17 @@ export class Board {
 
     const cascadeResult = this.resolveMatches(false, 2);
     clearEvents.push(...cascadeResult.clearEvents);
-    this.ensurePlayableBoard();
+    const boardWasReshuffled = this.ensurePlayableBoard();
 
     return this.createResolveSummary(
       clearEvents,
       false,
       cascadeResult.specialGroups,
+      boardWasReshuffled,
     );
   }
 
   hasAvailableMove(): boolean {
-    if (this.hasMatch()) {
-      this.resetMatchFlags();
-      return true;
-    }
-
     for (let y = 0; y < this.height; y++) {
       for (let x = 0; x < this.width; x++) {
         const right = { x: x + 1, y };
@@ -186,6 +195,39 @@ export class Board {
     }
 
     return false;
+  }
+
+  shuffleUntilPlayable(): void {
+    const pieces = this.getPiecesForShuffle();
+
+    for (let attempt = 0; attempt < MAX_SHUFFLE_ATTEMPTS; attempt++) {
+      this.placePieces(this.shufflePieces(pieces));
+      if (this.isPlayableStableBoard()) {
+        return;
+      }
+    }
+
+    for (let attempt = 0; attempt < MAX_REGENERATE_ATTEMPTS; attempt++) {
+      this.createInitialGrid();
+      if (this.isPlayableStableBoard()) {
+        return;
+      }
+    }
+
+    this.grid = this.createGridFromTypes(GUARANTEED_PLAYABLE_TYPES);
+
+    if (!this.isPlayableStableBoard()) {
+      throw new Error("Guaranteed playable board pattern is invalid.");
+    }
+  }
+
+  ensurePlayableBoard(): boolean {
+    if (this.hasAvailableMove()) {
+      return false;
+    }
+
+    this.shuffleUntilPlayable();
+    return true;
   }
 
   private resolveMatches(
@@ -502,6 +544,7 @@ export class Board {
     clearEvents: ClearEvent[],
     wasPlayerMove: boolean,
     specialGroups: MatchGroup[],
+    boardWasReshuffled = false,
   ): ResolveSummary {
     const summary: ResolveSummary = {
       totalCleared: clearEvents.reduce(
@@ -519,22 +562,11 @@ export class Board {
       );
     }
 
+    if (boardWasReshuffled) {
+      summary.boardWasReshuffled = true;
+    }
+
     return summary;
-  }
-
-  private ensurePlayableBoard(): void {
-    if (this.hasAvailableMove()) {
-      return;
-    }
-
-    for (let attempt = 0; attempt < 32; attempt++) {
-      this.grid = this.createInitialGrid();
-      if (!this.hasMatch() && this.hasAvailableMove()) {
-        return;
-      }
-    }
-
-    this.grid = this.createGridFromTypes(GUARANTEED_PLAYABLE_TYPES);
   }
 
   private createInitialGrid(): (Piece | null)[][] {
@@ -685,15 +717,108 @@ export class Board {
   }
 
   private swapWouldMatch(a: Coord, b: Coord): boolean {
-    if (!this.getPiece(a.x, a.y) || !this.getPiece(b.x, b.y)) {
+    const pieceA = this.getPiece(a.x, a.y);
+    const pieceB = this.getPiece(b.x, b.y);
+
+    if (!pieceA || !pieceB) {
       return false;
     }
 
-    this.exchange(a, b);
-    const wouldMatch = this.detectMatches().length > 0;
-    this.exchange(a, b);
-    this.resetMatchFlags();
-    return wouldMatch;
+    const stateA = {
+      x: pieceA.x,
+      y: pieceA.y,
+      isMatched: pieceA.isMatched,
+    };
+    const stateB = {
+      x: pieceB.x,
+      y: pieceB.y,
+      isMatched: pieceB.isMatched,
+    };
+
+    this.grid[a.y]![a.x] = pieceB;
+    this.grid[b.y]![b.x] = pieceA;
+    pieceA.x = b.x;
+    pieceA.y = b.y;
+    pieceB.x = a.x;
+    pieceB.y = a.y;
+
+    try {
+      return this.hasMatchAt(a) || this.hasMatchAt(b);
+    } finally {
+      this.grid[a.y]![a.x] = pieceA;
+      this.grid[b.y]![b.x] = pieceB;
+      pieceA.x = stateA.x;
+      pieceA.y = stateA.y;
+      pieceA.isMatched = stateA.isMatched;
+      pieceB.x = stateB.x;
+      pieceB.y = stateB.y;
+      pieceB.isMatched = stateB.isMatched;
+    }
+  }
+
+  private hasMatchAt(coord: Coord): boolean {
+    const piece = this.getPiece(coord.x, coord.y);
+    if (!piece) {
+      return false;
+    }
+
+    return this.wouldCreateMatch(coord.x, coord.y, piece.type);
+  }
+
+  private isPlayableStableBoard(): boolean {
+    return !this.hasHoles() && !this.hasMatch() && this.hasAvailableMove();
+  }
+
+  private getPiecesForShuffle(): Piece[] {
+    const pieces: Piece[] = [];
+
+    for (const row of this.grid) {
+      for (const piece of row) {
+        if (piece) {
+          piece.isMatched = false;
+          pieces.push(piece);
+        }
+      }
+    }
+
+    while (pieces.length < this.width * this.height) {
+      pieces.push(this.createPiece(0, 0, this.randomType()));
+    }
+
+    return pieces.slice(0, this.width * this.height);
+  }
+
+  private shufflePieces(pieces: readonly Piece[]): Piece[] {
+    const shuffled = [...pieces];
+
+    for (let index = shuffled.length - 1; index > 0; index--) {
+      const swapIndex = Math.floor(this.rng() * (index + 1));
+      const current = shuffled[index]!;
+      shuffled[index] = shuffled[swapIndex]!;
+      shuffled[swapIndex] = current;
+    }
+
+    return shuffled;
+  }
+
+  private placePieces(pieces: readonly Piece[]): void {
+    this.grid = Array.from({ length: this.height }, () =>
+      Array<Piece | null>(this.width).fill(null),
+    );
+
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        const piece = pieces[y * this.width + x];
+        if (!piece) {
+          throw new Error("Playable board shuffle requires 64 pieces.");
+        }
+
+        piece.x = x;
+        piece.y = y;
+        piece.isMatched = false;
+        this.grid[y]![x] = piece;
+      }
+    }
   }
 
   private isInBounds(coord: Coord): boolean {

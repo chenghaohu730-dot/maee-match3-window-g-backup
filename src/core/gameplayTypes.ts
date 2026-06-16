@@ -46,6 +46,7 @@ export type GameplayEvent =
       totalCleared: number;
       chainCount: number;
     }
+  | { type: "boardShuffled" }
   | { type: "vfx"; key: string }
   | { type: "combat"; event: CombatEvent };
 

@@ -66,7 +66,9 @@ export class GameplayController {
 
   handleResolveComplete(summary: ResolveSummary): GameplayEvent[] {
     if (this.phase !== "playing" || summary.wasPlayerMove === false) {
-      this.lastEvents = [];
+      this.lastEvents = summary.boardWasReshuffled
+        ? [{ type: "boardShuffled" }]
+        : [];
       return this.lastEvents;
     }
 
@@ -131,6 +133,10 @@ export class GameplayController {
     this.lastDamage = sumEnemyDamage(allCombatEvents);
     this.lastComboCount = sanitizeAmount(combinedSummary.chainCount);
     this.comboMax = Math.max(this.comboMax, this.lastComboCount);
+
+    if (combinedSummary.boardWasReshuffled) {
+      events.push({ type: "boardShuffled" });
+    }
 
     const scoreGain = calculateScoreGain(
       combinedSummary,
@@ -202,7 +208,14 @@ export class GameplayController {
       options.initialTypes = this.initialTypes;
     }
 
-    return new Board(options);
+    const board = new Board(options);
+    const boardWasReshuffled = board.ensurePlayableBoard();
+
+    if (boardWasReshuffled && this.phase === "playing") {
+      this.lastEvents = [{ type: "boardShuffled" }];
+    }
+
+    return board;
   }
 
   private recordSkillEvents(
@@ -279,6 +292,10 @@ function combineSummaries(
 
   if (baseSummary.maxMatchLength !== undefined) {
     combined.maxMatchLength = baseSummary.maxMatchLength;
+  }
+
+  if (baseSummary.boardWasReshuffled || effectSummary.boardWasReshuffled) {
+    combined.boardWasReshuffled = true;
   }
 
   return combined;

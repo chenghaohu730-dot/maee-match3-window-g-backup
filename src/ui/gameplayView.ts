@@ -168,7 +168,7 @@ export function renderGameplayScene(model: GameplayViewModel): string {
                 )
                 .join("")}
             </div>
-            ${renderBoardFeedback(state)}
+            ${renderBoardFeedback(state, model.lastEvents)}
             ${renderVfxFallbacks(state, skin)}
           </div>
         </section>
@@ -601,12 +601,18 @@ function renderResultPanel(state: GameplayState, skin: Match3Skin): string {
   `;
 }
 
-function renderBoardFeedback(state: GameplayState): string {
+function renderBoardFeedback(
+  state: GameplayState,
+  events: readonly GameplayEvent[],
+): string {
   const skillText = getSkillDisplayText(
     state.lastVfxKeys,
     state.lastSkillText,
     state.lastSkillLevel,
   );
+  const shuffle = events.some((event) => event.type === "boardShuffled")
+    ? `<div class="shuffle-pop">棋盘重排</div>`
+    : "";
   const skill = skillText
     ? `<div class="skill-pop ${state.lastSkillLevel ?? "skill"}">${escapeHtml(
         skillText,
@@ -621,7 +627,7 @@ function renderBoardFeedback(state: GameplayState): string {
       ? `<div class="combo-pop">${formatComboText(state.lastComboCount)}</div>`
       : "";
 
-  return `<div class="board-feedback">${skill}${damage}${combo}</div>`;
+  return `<div class="board-feedback">${shuffle}${skill}${damage}${combo}</div>`;
 }
 
 function formatComboText(chainCount: number): string {

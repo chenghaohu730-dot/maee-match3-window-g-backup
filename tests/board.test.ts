@@ -18,6 +18,17 @@ const stableTypes: PieceType[][] = [
   [1, 2, 3, 4, 5, 0, 1, 2],
 ];
 
+const playableTypes: PieceType[][] = [
+  [0, 1, 0, 2, 3, 4, 5, 1],
+  [2, 0, 3, 4, 5, 0, 1, 2],
+  [2, 3, 4, 5, 0, 1, 2, 3],
+  [3, 4, 5, 0, 1, 2, 3, 4],
+  [4, 5, 0, 1, 2, 3, 4, 5],
+  [5, 0, 1, 2, 3, 4, 5, 0],
+  [0, 1, 2, 3, 4, 5, 0, 1],
+  [1, 2, 3, 4, 5, 0, 1, 2],
+];
+
 test("creates a full 8x8 board without starting matches", () => {
   const board = new Board({ rng: fixedRng(0.18) });
 
@@ -25,6 +36,71 @@ test("creates a full 8x8 board without starting matches", () => {
   assert.equal(board.grid.every((row) => row.length === 8), true);
   assert.equal(board.hasHoles(), false);
   assert.equal(board.detectMatches().length, 0);
+});
+
+test("hasAvailableMove identifies a board with a legal move", () => {
+  const board = new Board({ initialTypes: playableTypes });
+
+  assert.equal(board.detectMatches().length, 0);
+  assert.equal(board.hasAvailableMove(), true);
+});
+
+test("hasAvailableMove identifies a board without legal moves", () => {
+  const board = new Board({ initialTypes: stableTypes });
+
+  assert.equal(board.detectMatches().length, 0);
+  assert.equal(board.hasAvailableMove(), false);
+});
+
+test("hasAvailableMove does not mutate board contents", () => {
+  const board = new Board({ initialTypes: playableTypes });
+  const beforeTypes = board.toTypes();
+  const beforeSnapshot = board.getSnapshot();
+
+  board.hasAvailableMove();
+
+  assert.deepEqual(board.toTypes(), beforeTypes);
+  assert.deepEqual(board.getSnapshot(), beforeSnapshot);
+});
+
+test("shuffleUntilPlayable keeps an 8x8 stable playable board", () => {
+  const board = new Board({
+    initialTypes: stableTypes,
+    rng: fixedRng(0),
+  });
+
+  board.shuffleUntilPlayable();
+
+  assert.equal(board.grid.length, 8);
+  assert.equal(board.grid.every((row) => row.length === 8), true);
+  assert.equal(board.getSnapshot().length, 64);
+  assert.equal(board.hasHoles(), false);
+  assert.equal(board.detectMatches().length, 0);
+  assert.equal(board.hasAvailableMove(), true);
+});
+
+test("ensurePlayableBoard leaves playable boards unchanged", () => {
+  const board = new Board({ initialTypes: playableTypes });
+  const before = board.getSnapshot();
+
+  const changed = board.ensurePlayableBoard();
+
+  assert.equal(changed, false);
+  assert.deepEqual(board.getSnapshot(), before);
+});
+
+test("ensurePlayableBoard reshuffles dead boards into playable boards", () => {
+  const board = new Board({
+    initialTypes: stableTypes,
+    rng: fixedRng(0),
+  });
+
+  const changed = board.ensurePlayableBoard();
+
+  assert.equal(changed, true);
+  assert.equal(board.getSnapshot().length, 64);
+  assert.equal(board.detectMatches().length, 0);
+  assert.equal(board.hasAvailableMove(), true);
 });
 
 test("rejects non-adjacent swaps", () => {
@@ -102,6 +178,7 @@ test("emits a resolve summary after a successful player move", () => {
     totalCleared: result.clearEvents.reduce((sum, event) => sum + event.pieces.length, 0),
     chainCount: result.clearEvents.length,
     wasPlayerMove: true,
+    boardWasReshuffled: true,
   });
 });
 
@@ -211,6 +288,25 @@ test("clearRandom board effect clears the requested count and refills", () => {
   assert.equal(new Set(coordsOf(events[0]?.pieces ?? [])).size, 8);
   assert.equal(summary.totalCleared >= 8, true);
   assert.equal(board.hasHoles(), false);
+  assert.equal(board.detectMatches().length, 0);
+  assert.equal(board.hasAvailableMove(), true);
+});
+
+test("applyBoardEffects repairs a dead board without creating clear events", () => {
+  const events: ClearEvent[] = [];
+  const board = new Board({
+    initialTypes: stableTypes,
+    rng: fixedRng(0),
+    onClear: (event) => events.push(event),
+  });
+
+  const summary = board.applyBoardEffects([{ type: "clearRandom", count: 0 }]);
+
+  assert.equal(summary.boardWasReshuffled, true);
+  assert.equal(summary.totalCleared, 0);
+  assert.equal(summary.chainCount, 0);
+  assert.equal(events.length, 0);
+  assert.equal(board.getSnapshot().length, 64);
   assert.equal(board.detectMatches().length, 0);
   assert.equal(board.hasAvailableMove(), true);
 });

@@ -1335,6 +1335,7 @@ p {
 .skill-pop,
 .damage-pop,
 .combo-pop,
+.shuffle-pop,
 .vfx-fallback {
   position: absolute;
   padding: 8px 12px;
@@ -1371,6 +1372,14 @@ p {
   color: #17324d;
   background: rgb(255 255 255 / 90%);
   animation: float-pop 900ms ease-out both;
+}
+
+.shuffle-pop {
+  top: 50%;
+  color: #17324d;
+  background: rgb(255 255 255 / 92%);
+  transform: translateY(-50%);
+  animation: shuffle-pop 800ms ease-out both;
 }
 
 .board-animation-combo {
@@ -2412,6 +2421,24 @@ p {
   100% {
     opacity: 0;
     transform: translate(-50%, -14px) scale(1.04);
+  }
+}
+
+@keyframes shuffle-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(-38%) scale(0.94);
+  }
+
+  18%,
+  72% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-62%) scale(0.98);
   }
 }
 

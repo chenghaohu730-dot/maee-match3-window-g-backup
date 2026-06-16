@@ -169,6 +169,23 @@ test("enemy ids map to readable monster names and combat state classes", () => {
   assert.equal(html.includes("火焰横扫"), true);
 });
 
+test("board reshuffle event renders the short gameplay feedback", () => {
+  const html = renderGameplayScene({
+    state: createGameplayState(),
+    pieces: createPieces(),
+    selected: null,
+    message: "选择两个相邻棋子交换。",
+    lastEvents: [{ type: "boardShuffled" }],
+    progress: createDefaultProgress(),
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: fairySkin,
+  });
+
+  assert.equal(html.includes("shuffle-pop"), true);
+  assert.equal(html.includes("棋盘重排"), true);
+});
+
 test("locked universe cards still render as locked fallback entries", () => {
   const html = renderUniverseScene({
     progress: createDefaultProgress(),

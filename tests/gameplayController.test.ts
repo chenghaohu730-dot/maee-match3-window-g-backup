@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type {
-  MatchGroup,
-  PieceType,
-  ResolveSummary,
+import {
+  Board,
+  type MatchGroup,
+  type PieceType,
+  type ResolveSummary,
 } from "../src/core/board.ts";
 import { GameplayController } from "../src/core/gameplayController.ts";
 import type { GameplayEvent } from "../src/core/gameplayTypes.ts";
@@ -15,7 +16,18 @@ const YELLOW: PieceType = 2;
 const GREEN: PieceType = 3;
 const PURPLE: PieceType = 4;
 
-const stableTypes: PieceType[][] = [
+const playableTypes: PieceType[][] = [
+  [0, 1, 0, 2, 3, 4, 5, 1],
+  [2, 0, 3, 4, 5, 0, 1, 2],
+  [2, 3, 4, 5, 0, 1, 2, 3],
+  [3, 4, 5, 0, 1, 2, 3, 4],
+  [4, 5, 0, 1, 2, 3, 4, 5],
+  [5, 0, 1, 2, 3, 4, 5, 0],
+  [0, 1, 2, 3, 4, 5, 0, 1],
+  [1, 2, 3, 4, 5, 0, 1, 2],
+];
+
+const deadTypes: PieceType[][] = [
   [0, 1, 2, 3, 4, 5, 0, 1],
   [1, 2, 3, 4, 5, 0, 1, 2],
   [2, 3, 4, 5, 0, 1, 2, 3],
@@ -224,6 +236,28 @@ test("purple 5-match executes clearRandom count 12 as a board effect", () => {
   assert.equal(controller.board.hasHoles(), false);
 });
 
+test("board reshuffle does not change combat, score, or hp state", () => {
+  const controller = createController([wave("shuffle-safety", 100, 2, 10)]);
+  controller.startGame();
+  controller.board = new Board({
+    initialTypes: deadTypes,
+    rng: fixedRng(0),
+  });
+  const before = controller.getState();
+
+  const changed = controller.board.ensurePlayableBoard();
+  const after = controller.getState();
+
+  assert.equal(changed, true);
+  assert.equal(after.score, before.score);
+  assert.equal(after.enemyHp, before.enemyHp);
+  assert.equal(after.enemyAttackCounter, before.enemyAttackCounter);
+  assert.equal(after.playerHp, before.playerHp);
+  assert.equal(after.playerShield, before.playerShield);
+  assert.equal(controller.board.detectMatches().length, 0);
+  assert.equal(controller.board.hasAvailableMove(), true);
+});
+
 test("extra board effect clears advance enemy attack at most once", () => {
   const controller = createController([wave("counter-test", 300, 2, 10)]);
   controller.startGame();
@@ -260,7 +294,7 @@ test("enemy defeated by board-effect follow-up damage does not counterattack", (
 
 function createController(waves?: EnemyWave[]): GameplayController {
   const options = {
-    initialTypes: stableTypes,
+    initialTypes: playableTypes,
     rng: fixedRng(0.73),
   };
 
