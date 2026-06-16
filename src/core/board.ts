@@ -10,6 +10,13 @@ export interface Piece {
   isMatched: boolean;
 }
 
+export interface BoardPieceSnapshot {
+  id: string;
+  type: PieceType;
+  row: number;
+  col: number;
+}
+
 export interface ClearEvent {
   pieces: Piece[];
   damage: number;
@@ -347,6 +354,28 @@ export class Board {
     }
 
     return this.grid[y]?.[x] ?? null;
+  }
+
+  getSnapshot(): BoardPieceSnapshot[] {
+    const snapshot: BoardPieceSnapshot[] = [];
+
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        const piece = this.grid[y]?.[x] ?? null;
+        if (!piece) {
+          continue;
+        }
+
+        snapshot.push({
+          id: piece.id,
+          type: piece.type,
+          row: y,
+          col: x,
+        });
+      }
+    }
+
+    return snapshot;
   }
 
   toTypes(): (PieceType | null)[][] {

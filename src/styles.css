@@ -422,8 +422,47 @@ p {
 }
 
 .stage-hit-flash.shake-medium,
-.stage-hit-flash.shake-large {
+.stage-hit-flash.shake-large,
+.stage-hit-flash.shake-small {
   animation: stage-flash 360ms ease-out both;
+}
+
+.battle-zone.battle-vfx-active::after {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  content: "";
+  pointer-events: none;
+}
+
+.battle-zone.battle-vfx-red::after {
+  background: radial-gradient(circle at 50% 58%, rgb(248 113 113 / 34%), transparent 54%);
+  animation: battle-color-flash 720ms ease-out both;
+}
+
+.battle-zone.battle-vfx-blue::after {
+  background: radial-gradient(circle at 50% 58%, rgb(125 211 252 / 36%), transparent 54%);
+  animation: battle-color-flash 720ms ease-out both;
+}
+
+.battle-zone.battle-vfx-yellow::after {
+  background: radial-gradient(circle at 50% 58%, rgb(250 204 21 / 36%), transparent 54%);
+  animation: battle-color-flash 720ms ease-out both;
+}
+
+.battle-zone.battle-vfx-green::after {
+  background: radial-gradient(circle at 50% 58%, rgb(74 222 128 / 34%), transparent 54%);
+  animation: battle-color-flash 760ms ease-out both;
+}
+
+.battle-zone.battle-vfx-purple::after {
+  background: radial-gradient(circle at 50% 58%, rgb(192 132 252 / 34%), transparent 54%);
+  animation: battle-color-flash 760ms ease-out both;
+}
+
+.battle-zone.battle-vfx-orange::after {
+  background: radial-gradient(circle at 50% 58%, rgb(251 146 60 / 36%), transparent 54%);
+  animation: battle-color-flash 760ms ease-out both;
 }
 
 .versus-mark {
@@ -637,6 +676,58 @@ p {
   min-width: 0;
 }
 
+.combat-info-panel.combat-vfx-active {
+  position: relative;
+  overflow: hidden;
+}
+
+.combat-info-panel.combat-vfx-active::after {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  content: "";
+  pointer-events: none;
+}
+
+.combat-info-panel.combat-vfx-player::after {
+  background: linear-gradient(90deg, rgb(52 211 153 / 0%), rgb(52 211 153 / 42%), rgb(52 211 153 / 0%));
+  animation: combat-panel-flash 720ms ease-out both;
+}
+
+.combat-info-panel.combat-vfx-enemy::after {
+  background: linear-gradient(90deg, rgb(255 167 38 / 0%), rgb(255 167 38 / 46%), rgb(255 167 38 / 0%));
+  animation: combat-panel-flash 760ms ease-out both;
+}
+
+.combat-info-panel.combat-vfx-attack::after {
+  background: linear-gradient(90deg, rgb(96 165 250 / 0%), rgb(96 165 250 / 42%), rgb(96 165 250 / 0%));
+  animation: combat-panel-flash 720ms ease-out both;
+}
+
+.combat-green-skill-shield .hp-fill.player,
+.combat-green-ultimate-bloom .hp-fill.player {
+  box-shadow:
+    0 0 10px rgb(34 197 94 / 72%),
+    0 0 18px rgb(187 247 208 / 60%);
+  filter: brightness(1.2);
+}
+
+.combat-orange-skill-hammer .hp-fill.enemy,
+.combat-orange-ultimate-judgement .hp-fill.enemy {
+  box-shadow:
+    0 0 10px rgb(251 146 60 / 82%),
+    0 0 18px rgb(253 224 71 / 48%);
+  filter: brightness(1.18);
+}
+
+.combat-blue-skill-freeze .attack-track,
+.combat-blue-ultimate-icefall .attack-track {
+  box-shadow:
+    inset 0 0 0 1px rgb(191 219 254 / 82%),
+    0 0 12px rgb(96 165 250 / 58%);
+  filter: saturate(1.15) brightness(1.08);
+}
+
 .board-zone {
   min-height: 0;
   display: grid;
@@ -727,6 +818,20 @@ p {
     transform 80ms ease;
 }
 
+.piece::after {
+  position: absolute;
+  inset: -2px;
+  border: 3px solid rgb(255 245 157 / 94%);
+  border-radius: 8px;
+  opacity: 0;
+  content: "";
+  pointer-events: none;
+  box-shadow:
+    0 0 10px rgb(70 202 255 / 54%),
+    inset 0 0 8px rgb(255 255 255 / 54%);
+  transition: opacity 80ms ease;
+}
+
 .piece:active {
   transform: translateY(2px) scale(0.97);
   filter: brightness(1.08);
@@ -737,13 +842,57 @@ p {
 }
 
 .piece.selected {
+  z-index: 3;
   outline: 3px solid #111827;
   outline-offset: -3px;
+  transform: scale(1.08);
   filter: brightness(1.1) saturate(1.1);
+}
+
+.piece.selected::after {
+  opacity: 1;
 }
 
 .piece.has-image.selected {
   outline: 0;
+}
+
+.piece.swapping,
+.piece.clearing,
+.piece.dropping,
+.piece.spawning {
+  z-index: 6;
+  pointer-events: none;
+}
+
+.piece.clearing {
+  box-shadow:
+    0 0 18px rgb(255 245 157 / 70%),
+    0 0 30px rgb(72 210 255 / 36%),
+    inset 0 -5px 0 rgb(255 255 255 / 18%);
+}
+
+.piece.clearing::before {
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  content: "";
+  background: radial-gradient(
+    circle,
+    rgb(255 255 255 / 78%) 0%,
+    rgb(255 232 125 / 46%) 38%,
+    rgb(255 255 255 / 0%) 72%
+  );
+  animation: piece-clear-glow 220ms ease-out both;
+  pointer-events: none;
+}
+
+.piece.dropping {
+  filter: brightness(1.04) saturate(1.06);
+}
+
+.piece.spawning {
+  filter: brightness(1.12) saturate(1.1);
 }
 
 .piece-shine {
@@ -936,6 +1085,16 @@ p {
   animation: float-pop 900ms ease-out both;
 }
 
+.board-animation-combo {
+  left: 50%;
+  bottom: 13%;
+  z-index: 7;
+  color: #5b3200;
+  background: rgb(255 243 181 / 94%);
+  transform: translateX(-50%);
+  animation: board-combo-pop 900ms ease-out both;
+}
+
 .vfx-fallback {
   top: 22%;
   background: rgb(255 255 255 / 88%);
@@ -947,12 +1106,378 @@ p {
   top: 58%;
 }
 
+.skill-vfx-layer {
+  --skill-vfx-red: #ff4f45;
+  --skill-vfx-blue: #5bbcff;
+  --skill-vfx-yellow: #ffd84d;
+  --skill-vfx-green: #43d17d;
+  --skill-vfx-purple: #a978ff;
+  --skill-vfx-orange: #ff9d3b;
+  position: absolute;
+  inset: 11%;
+  z-index: 7;
+  overflow: visible;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.skill-vfx-layer > span {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.skill-vfx-board-glow {
+  inset: 0;
+  border-radius: 8px;
+  opacity: 0;
+}
+
+.skill-vfx-row-sweep {
+  top: var(--skill-vfx-row, 50%);
+  left: -8%;
+  width: 116%;
+  height: 13%;
+  translate: 0 -50%;
+  opacity: 0;
+  border-radius: 999px;
+}
+
+.skill-vfx-core,
+.skill-vfx-ring,
+.skill-vfx-impact {
+  top: var(--skill-vfx-y, 50%);
+  left: var(--skill-vfx-x, 50%);
+  translate: -50% -50%;
+  opacity: 0;
+}
+
+.skill-vfx-core {
+  width: 42%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.skill-vfx-ring {
+  width: 62%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.skill-vfx-impact {
+  width: 22%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+}
+
+.skill-vfx-beam {
+  left: 12%;
+  top: 18%;
+  width: 58%;
+  height: 8%;
+  opacity: 0;
+  border-radius: 999px;
+  transform-origin: left center;
+  rotate: -27deg;
+}
+
+.skill-vfx-burst {
+  width: 13%;
+  aspect-ratio: 1;
+  opacity: 0;
+  border-radius: 50%;
+}
+
+.skill-vfx-burst.burst-1 {
+  left: 18%;
+  top: 28%;
+}
+
+.skill-vfx-burst.burst-2 {
+  right: 18%;
+  top: 22%;
+}
+
+.skill-vfx-burst.burst-3 {
+  left: 26%;
+  bottom: 18%;
+}
+
+.skill-vfx-burst.burst-4 {
+  right: 24%;
+  bottom: 25%;
+}
+
+.skill-vfx-fall {
+  top: -16%;
+  width: 7%;
+  height: 26%;
+  opacity: 0;
+  border-radius: 999px 999px 6px 6px;
+}
+
+.skill-vfx-fall.fall-1 {
+  left: 17%;
+}
+
+.skill-vfx-fall.fall-2 {
+  left: 38%;
+  animation-delay: 80ms;
+}
+
+.skill-vfx-fall.fall-3 {
+  left: 60%;
+  animation-delay: 150ms;
+}
+
+.skill-vfx-fall.fall-4 {
+  left: 78%;
+  animation-delay: 230ms;
+}
+
+.skill-vfx-chain-dot {
+  width: 9%;
+  aspect-ratio: 1;
+  opacity: 0;
+  border-radius: 50%;
+}
+
+.skill-vfx-chain-dot.dot-1 {
+  left: 20%;
+  top: 36%;
+}
+
+.skill-vfx-chain-dot.dot-2 {
+  left: 39%;
+  top: 54%;
+}
+
+.skill-vfx-chain-dot.dot-3 {
+  left: 58%;
+  top: 34%;
+}
+
+.skill-vfx-chain-dot.dot-4 {
+  left: 72%;
+  top: 57%;
+}
+
+.skill-vfx-caption,
+.skill-vfx-combo {
+  left: 50%;
+  z-index: 2;
+  translate: -50% 0;
+  min-width: max-content;
+  padding: 8px 13px;
+  border-radius: 8px;
+  font-weight: 900;
+  text-align: center;
+  text-shadow: 0 2px 2px rgb(0 0 0 / 24%);
+  white-space: nowrap;
+}
+
+.skill-vfx-caption {
+  top: 37%;
+  color: #fff;
+  background: rgb(17 24 39 / 88%);
+  font-size: 21px;
+  animation: skill-vfx-caption 700ms ease-out both;
+}
+
+.skill-vfx-ultimate .skill-vfx-caption {
+  top: 34%;
+  padding: 9px 16px;
+  font-size: 25px;
+  letter-spacing: 0;
+  animation-duration: 1050ms;
+}
+
+.skill-vfx-combo {
+  bottom: 13%;
+  color: #3a2b00;
+  background: rgb(255 245 166 / 94%);
+  font-size: 16px;
+  animation: skill-vfx-combo 900ms ease-out both;
+}
+
+.red-skill-slash .skill-vfx-row-sweep {
+  background:
+    linear-gradient(90deg, transparent, rgb(255 231 148 / 92%) 20%, rgb(255 79 69 / 98%) 50%, rgb(255 231 148 / 90%) 80%, transparent),
+    radial-gradient(circle, rgb(255 255 255 / 80%), rgb(255 255 255 / 0%));
+  box-shadow:
+    0 0 20px rgb(255 79 69 / 76%),
+    0 0 34px rgb(251 146 60 / 56%);
+  animation: red-skill-slash 700ms ease-out both;
+}
+
+.red-skill-slash .skill-vfx-board-glow {
+  background: radial-gradient(circle, rgb(255 121 64 / 26%), transparent 68%);
+  animation: board-glow-pulse 700ms ease-out both;
+}
+
+.red-ultimate-spin .skill-vfx-core {
+  background:
+    conic-gradient(from 0deg, transparent, rgb(255 231 148 / 90%), rgb(255 79 69 / 94%), transparent 62%),
+    radial-gradient(circle, rgb(255 255 255 / 44%), rgb(255 90 63 / 22%) 52%, transparent 70%);
+  box-shadow: 0 0 32px rgb(255 79 69 / 78%);
+  animation: ultimate-spin 1050ms ease-out both;
+}
+
+.red-ultimate-spin .skill-vfx-burst {
+  background: radial-gradient(circle, #fff7b5, #ff713f 54%, transparent 72%);
+  animation: burst-pop 850ms ease-out both;
+}
+
+.blue-skill-freeze .skill-vfx-board-glow {
+  background:
+    linear-gradient(135deg, rgb(255 255 255 / 58%), rgb(125 211 252 / 30%), transparent),
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 0%) 0 12px, rgb(191 219 254 / 34%) 13px 15px);
+  box-shadow: inset 0 0 28px rgb(96 165 250 / 60%);
+  animation: freeze-flash 700ms ease-out both;
+}
+
+.blue-skill-freeze .skill-vfx-impact,
+.blue-ultimate-icefall .skill-vfx-impact {
+  background: radial-gradient(circle, #fff, #93c5fd 48%, transparent 70%);
+  animation: ice-crack 700ms ease-out both;
+}
+
+.blue-ultimate-icefall .skill-vfx-fall {
+  background: linear-gradient(180deg, rgb(239 246 255 / 94%), rgb(56 189 248 / 74%), transparent);
+  box-shadow: 0 0 14px rgb(125 211 252 / 78%);
+  animation: icefall 980ms cubic-bezier(0.16, 0.82, 0.22, 1) both;
+}
+
+.yellow-skill-chain .skill-vfx-chain-dot {
+  background: radial-gradient(circle, #fff, #fde047 48%, transparent 70%);
+  box-shadow: 0 0 16px rgb(250 204 21 / 74%);
+  animation: chain-star 700ms ease-out both;
+}
+
+.yellow-skill-chain .skill-vfx-ring {
+  border: 2px dashed rgb(250 204 21 / 82%);
+  animation: yellow-ring 700ms ease-out both;
+}
+
+.yellow-ultimate-meteor .skill-vfx-fall {
+  width: 9%;
+  height: 24%;
+  background: linear-gradient(180deg, rgb(255 255 255 / 96%), rgb(250 204 21 / 82%), transparent);
+  box-shadow: 0 0 18px rgb(250 204 21 / 82%);
+  rotate: -18deg;
+  animation: meteor-fall 1050ms cubic-bezier(0.18, 0.82, 0.2, 1) both;
+}
+
+.yellow-ultimate-meteor .skill-vfx-combo {
+  color: #4a2f00;
+  background: rgb(255 236 111 / 96%);
+  font-size: 19px;
+  box-shadow: 0 0 20px rgb(250 204 21 / 58%);
+}
+
+.green-skill-shield .skill-vfx-beam {
+  background: linear-gradient(90deg, rgb(255 255 255 / 0%), rgb(110 231 183 / 88%), rgb(34 197 94 / 0%));
+  box-shadow: 0 0 18px rgb(74 222 128 / 70%);
+  animation: shield-beam 700ms ease-out both;
+}
+
+.green-skill-shield .skill-vfx-ring,
+.green-ultimate-bloom .skill-vfx-ring {
+  border: 3px solid rgb(74 222 128 / 78%);
+  box-shadow:
+    0 0 18px rgb(74 222 128 / 58%),
+    inset 0 0 20px rgb(187 247 208 / 34%);
+  animation: green-ring 900ms ease-out both;
+}
+
+.green-ultimate-bloom .skill-vfx-board-glow {
+  border: 2px solid rgb(74 222 128 / 66%);
+  background:
+    radial-gradient(circle at 20% 14%, rgb(187 247 208 / 46%), transparent 18%),
+    radial-gradient(circle at 82% 88%, rgb(74 222 128 / 38%), transparent 22%),
+    radial-gradient(circle, rgb(34 197 94 / 18%), transparent 70%);
+  animation: bloom-glow 1050ms ease-out both;
+}
+
+.purple-skill-bomb .skill-vfx-impact {
+  background: radial-gradient(circle, #fff, #c084fc 42%, rgb(88 28 135 / 0%) 72%);
+  box-shadow: 0 0 24px rgb(168 85 247 / 72%);
+  animation: purple-bomb 700ms ease-out both;
+}
+
+.purple-skill-bomb .skill-vfx-ring,
+.purple-ultimate-magic-circle .skill-vfx-ring {
+  border: 3px double rgb(192 132 252 / 82%);
+  box-shadow:
+    0 0 22px rgb(168 85 247 / 62%),
+    inset 0 0 22px rgb(216 180 254 / 28%);
+  animation: magic-circle 1050ms ease-out both;
+}
+
+.purple-ultimate-magic-circle .skill-vfx-core {
+  background: conic-gradient(from 45deg, transparent, rgb(216 180 254 / 78%), rgb(126 34 206 / 88%), transparent);
+  animation: ultimate-spin 1050ms ease-out both;
+}
+
+.orange-skill-hammer {
+  animation: board-press 700ms ease-out both;
+}
+
+.orange-skill-hammer .skill-vfx-impact {
+  background: radial-gradient(circle, #fff7b5, #fb923c 52%, transparent 72%);
+  box-shadow: 0 0 24px rgb(251 146 60 / 76%);
+  animation: hammer-impact 700ms ease-out both;
+}
+
+.orange-ultimate-judgement .skill-vfx-row-sweep {
+  top: 50%;
+  left: 45%;
+  width: 10%;
+  height: 120%;
+  background: linear-gradient(180deg, transparent, rgb(255 245 157 / 96%) 24%, rgb(251 146 60 / 94%) 60%, transparent);
+  box-shadow:
+    0 0 20px rgb(251 146 60 / 82%),
+    0 0 42px rgb(250 204 21 / 48%);
+  animation: judgement-drop 1050ms ease-out both;
+}
+
+.orange-ultimate-judgement .skill-vfx-impact {
+  background: radial-gradient(circle, #fff7b5, #fb923c 45%, transparent 70%);
+  animation: hammer-impact 950ms ease-out both;
+}
+
+.generic-vfx-flash .skill-vfx-board-glow {
+  background: radial-gradient(circle, rgb(255 255 255 / 62%), rgb(96 165 250 / 22%), transparent 70%);
+  box-shadow: inset 0 0 26px rgb(255 255 255 / 54%);
+  animation: board-glow-pulse 620ms ease-out both;
+}
+
 .shake-medium {
+  animation: shake-medium 360ms ease-in-out;
+}
+
+.shake-small {
+  animation: shake-small 220ms ease-in-out;
+}
+
+.board-shake-small {
+  animation: shake-small 180ms ease-in-out;
+}
+
+.board-shake-medium {
   animation: shake-medium 280ms ease-in-out;
 }
 
 .shake-large {
-  animation: shake-large 380ms ease-in-out;
+  animation: shake-large 520ms ease-in-out;
+}
+
+.board-stage.skill-vfx-active.orange-skill-hammer {
+  animation: board-press 700ms ease-out both;
+}
+
+.board-stage.skill-vfx-active.orange-ultimate-judgement {
+  animation: shake-large 520ms ease-in-out;
 }
 
 .result-panel,
@@ -998,6 +1523,397 @@ p {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+@keyframes combat-panel-flash {
+  0% {
+    opacity: 0;
+    transform: translateX(-35%);
+  }
+
+  30%,
+  68% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(35%);
+  }
+}
+
+@keyframes battle-color-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  28%,
+  70% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes skill-vfx-caption {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.86);
+  }
+
+  18%,
+  72% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(1.04);
+  }
+}
+
+@keyframes skill-vfx-combo {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.9);
+  }
+
+  22%,
+  72% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-12px) scale(1.04);
+  }
+}
+
+@keyframes red-skill-slash {
+  0% {
+    opacity: 0;
+    transform: translateX(-38%) scaleX(0.32);
+  }
+
+  28% {
+    opacity: 1;
+    transform: translateX(0) scaleX(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(38%) scaleX(0.72);
+  }
+}
+
+@keyframes board-glow-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  30%,
+  70% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes ultimate-spin {
+  0% {
+    opacity: 0;
+    transform: rotate(0deg) scale(0.72);
+  }
+
+  24%,
+  76% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: rotate(460deg) scale(1.26);
+  }
+}
+
+@keyframes burst-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+
+  32% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+@keyframes freeze-flash {
+  0% {
+    opacity: 0;
+    filter: blur(1px) brightness(1);
+  }
+
+  30%,
+  76% {
+    opacity: 1;
+    filter: blur(0) brightness(1.12);
+  }
+
+  100% {
+    opacity: 0;
+    filter: blur(2px) brightness(1);
+  }
+}
+
+@keyframes ice-crack {
+  0% {
+    opacity: 0;
+    transform: scale(0.42);
+  }
+
+  36% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+@keyframes icefall {
+  0% {
+    opacity: 0;
+    transform: translateY(-35%) scaleY(0.84);
+  }
+
+  24% {
+    opacity: 1;
+  }
+
+  78% {
+    opacity: 1;
+    transform: translateY(245%) scaleY(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(285%) scaleY(0.72);
+  }
+}
+
+@keyframes chain-star {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+
+  35%,
+  68% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.45);
+  }
+}
+
+@keyframes yellow-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.62) rotate(0deg);
+  }
+
+  35%,
+  72% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.08) rotate(120deg);
+  }
+}
+
+@keyframes meteor-fall {
+  0% {
+    opacity: 0;
+    transform: translate(-60%, -45%) scale(0.75);
+  }
+
+  20% {
+    opacity: 1;
+  }
+
+  76% {
+    opacity: 1;
+    transform: translate(32%, 250%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(46%, 290%) scale(0.72);
+  }
+}
+
+@keyframes shield-beam {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.1);
+  }
+
+  30%,
+  72% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scaleX(0.22);
+  }
+}
+
+@keyframes green-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+
+  32%,
+  76% {
+    opacity: 1;
+    transform: scale(0.94);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes bloom-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  28%,
+  78% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes purple-bomb {
+  0% {
+    opacity: 0;
+    transform: scale(0.34);
+  }
+
+  34% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(2.15);
+  }
+}
+
+@keyframes magic-circle {
+  0% {
+    opacity: 0;
+    transform: scale(0.54) rotate(0deg);
+  }
+
+  28%,
+  76% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.16) rotate(180deg);
+  }
+}
+
+@keyframes board-press {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+
+  20% {
+    transform: translateY(8px) scaleY(0.98);
+  }
+
+  42% {
+    transform: translateY(-3px) scaleY(1.01);
+  }
+}
+
+@keyframes hammer-impact {
+  0% {
+    opacity: 0;
+    transform: translateY(-18%) scale(0.45);
+  }
+
+  30% {
+    opacity: 1;
+    transform: translateY(0) scale(1.08);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(12%) scale(1.85);
+  }
+}
+
+@keyframes judgement-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-42%) scaleY(0.4);
+  }
+
+  24%,
+  72% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(24%) scaleY(0.7);
+  }
 }
 
 @keyframes skill-pop {
@@ -1054,6 +1970,41 @@ p {
   }
 }
 
+@keyframes piece-clear-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.68);
+  }
+
+  45% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes board-combo-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.88);
+  }
+
+  22%,
+  74% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -14px) scale(1.04);
+  }
+}
+
 @keyframes actor-idle {
   0%,
   100% {
@@ -1090,6 +2041,21 @@ p {
   100% {
     opacity: 0;
     transform: scaleX(1.12);
+  }
+}
+
+@keyframes shake-small {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  35% {
+    transform: translateX(-3px);
+  }
+
+  70% {
+    transform: translateX(2px);
   }
 }
 

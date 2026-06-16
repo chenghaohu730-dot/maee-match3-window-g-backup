@@ -12,6 +12,10 @@ import type { PlayerProgress } from "./progressionStore.ts";
 import type { ModalKind } from "./sceneState.ts";
 import { UNIVERSE_CARDS } from "./sceneState.ts";
 import { PHONE_LAYOUT } from "./layout.ts";
+import {
+  getScreenShakeClassFromKeys,
+  getSkillDisplayText,
+} from "./skillVfxLayer.ts";
 
 export interface GameplayViewModel {
   state: GameplayState;
@@ -358,6 +362,7 @@ function renderPiece(
         assetKey,
       )}"
       type="button"
+      data-piece-id="${escapeAttribute(piece.id)}"
       data-x="${piece.x}"
       data-y="${piece.y}"
       aria-label="piece ${piece.x},${piece.y}"
@@ -439,9 +444,14 @@ function renderResultPanel(state: GameplayState, skin: Match3Skin): string {
 }
 
 function renderBoardFeedback(state: GameplayState): string {
-  const skill = state.lastSkillText
+  const skillText = getSkillDisplayText(
+    state.lastVfxKeys,
+    state.lastSkillText,
+    state.lastSkillLevel,
+  );
+  const skill = skillText
     ? `<div class="skill-pop ${state.lastSkillLevel ?? "skill"}">${escapeHtml(
-        state.lastSkillText,
+        skillText,
       )}</div>`
     : "";
   const damage =
@@ -449,11 +459,19 @@ function renderBoardFeedback(state: GameplayState): string {
       ? `<div class="damage-pop">-${formatNumber(state.lastDamage)}</div>`
       : "";
   const combo =
-    state.lastComboCount > 0
-      ? `<div class="combo-pop">Combo ${state.lastComboCount}</div>`
+    state.lastComboCount > 1
+      ? `<div class="combo-pop">${formatComboText(state.lastComboCount)}</div>`
       : "";
 
   return `<div class="board-feedback">${skill}${damage}${combo}</div>`;
+}
+
+function formatComboText(chainCount: number): string {
+  if (chainCount >= 4) {
+    return "AMAZING";
+  }
+
+  return `${chainCount} COMBO`;
 }
 
 function renderVfxFallbacks(state: GameplayState, skin: Match3Skin): string {
@@ -489,15 +507,7 @@ function renderVfxFallbacks(state: GameplayState, skin: Match3Skin): string {
 }
 
 function getShakeClass(state: GameplayState): string {
-  if (state.lastVfxKeys.includes("screenShake:large")) {
-    return "shake-large";
-  }
-
-  if (state.lastVfxKeys.includes("screenShake:medium")) {
-    return "shake-medium";
-  }
-
-  return "";
+  return getScreenShakeClassFromKeys(state.lastVfxKeys);
 }
 
 function formatNumber(value: number): string {
