@@ -14,12 +14,12 @@ export const ASSET_MANIFEST = {
   universe_card_window: "/assets/universe/universe_card_window.png",
   universe_lock_icon: "/assets/universe/universe_lock_icon.png",
 
-  ft_gameplay_bg: "/assets/fairy/gameplay/ft_gameplay_bg.png",
-  ft_battle_stage_bg: "/assets/fairy/gameplay/ft_battle_stage_bg.png",
-  ft_board_frame: "/assets/fairy/gameplay/ft_board_frame.png",
-  ft_board_bg: "/assets/fairy/gameplay/ft_board_bg.png",
-  ft_grid_cell: "/assets/fairy/gameplay/ft_grid_cell.png",
-  ft_grid_cell_highlight: "/assets/fairy/gameplay/ft_grid_cell_highlight.png",
+  ft_gameplay_bg: "/assets/fairy/backgrounds/ft_gameplay_bg.png",
+  ft_battle_stage_bg: "/assets/fairy/backgrounds/ft_battle_stage_bg.png",
+  ft_board_frame: "/assets/fairy/board/ft_board_frame.png",
+  ft_board_bg: "/assets/fairy/board/ft_board_bg.png",
+  ft_grid_cell: "/assets/fairy/board/ft_grid_cell.png",
+  ft_grid_cell_highlight: "/assets/fairy/board/ft_grid_cell_highlight.png",
 
   piece_red_flame: "/assets/fairy/pieces/piece_red_flame.png",
   piece_blue_frost: "/assets/fairy/pieces/piece_blue_frost.png",
@@ -35,6 +35,9 @@ export const ASSET_MANIFEST = {
   yizai_hero_hurt: "/assets/fairy/yizai/yizai_hero_hurt.png",
 
   monster_slime_idle: "/assets/fairy/monsters/monster_slime_idle.png",
+  monster_slime_hit: "/assets/fairy/monsters/monster_slime_hit.png",
+  monster_slime_attack: "/assets/fairy/monsters/monster_slime_attack.png",
+  monster_slime_defeat: "/assets/fairy/monsters/monster_slime_defeat.png",
   monster_pumpkin_idle: "/assets/fairy/monsters/monster_pumpkin_idle.png",
   monster_crow_idle: "/assets/fairy/monsters/monster_crow_idle.png",
   monster_tree_idle: "/assets/fairy/monsters/monster_tree_idle.png",

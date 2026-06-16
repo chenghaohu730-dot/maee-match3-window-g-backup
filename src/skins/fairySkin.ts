@@ -97,6 +97,21 @@ const fairyOverrides: Partial<
       "asset-fallback fallback-fairy fallback-monster monster-slime-card",
     fallbackLabel: "森林史莱姆",
   },
+  monster_slime_hit: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-slime-card",
+    fallbackLabel: "森林史莱姆受击",
+  },
+  monster_slime_attack: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-slime-card",
+    fallbackLabel: "森林史莱姆攻击",
+  },
+  monster_slime_defeat: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-slime-card",
+    fallbackLabel: "森林史莱姆退场",
+  },
   monster_pumpkin_idle: {
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-pumpkin-card",
