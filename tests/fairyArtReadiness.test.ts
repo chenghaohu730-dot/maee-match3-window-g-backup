@@ -58,10 +58,19 @@ const FORMAL_BACKGROUND_KEYS = [
   "ft_battle_stage_bg",
 ] as const satisfies readonly AssetKey[];
 
+const FORMAL_YIZAI_HERO_KEYS = [
+  "yizai_hero_idle",
+  "yizai_hero_attack",
+  "yizai_hero_skill",
+  "yizai_hero_ultimate",
+  "yizai_hero_hurt",
+] as const satisfies readonly AssetKey[];
+
 const FORMAL_READY_KEYS = [
   ...FORMAL_PIECE_KEYS,
   ...FORMAL_BOARD_KEYS,
   ...FORMAL_BACKGROUND_KEYS,
+  ...FORMAL_YIZAI_HERO_KEYS,
 ] as const satisfies readonly AssetKey[];
 
 test("fairySkin has paths for every first-batch fairy MVP asset", () => {
@@ -157,6 +166,29 @@ test("formal fairy background images render by default", () => {
     html.includes("url('/assets/fairy/backgrounds/ft_battle_stage_bg.png')"),
     true,
   );
+});
+
+test("formal yizai hero fallback images render by default", () => {
+  for (const key of FORMAL_YIZAI_HERO_KEYS) {
+    const resource = fairySkin.resources[key];
+
+    assert.equal(resource.available, true);
+    assert.equal(hasImageResource(resource), true);
+  }
+
+  const html = renderGameplayScene({
+    ...createGameplayModel(fairySkin),
+    state: {
+      ...createGameplayState(),
+      lastDamage: 0,
+    },
+  });
+
+  assert.equal(
+    html.includes("url('/assets/fairy/yizai/yizai_hero_idle.png')"),
+    true,
+  );
+  assert.equal(html.includes("data-fallback-key=\"yizai_hero_idle\""), true);
 });
 
 test("missing remaining first-batch fairy MVP images stay on fallback", () => {

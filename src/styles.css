@@ -1435,6 +1435,15 @@ p {
   background-size: 100% 100%;
 }
 
+.character-sprite.has-image {
+  border-color: transparent;
+  background-color: transparent;
+}
+
+.character-sprite.has-image:not(.character-sheet) {
+  background-size: contain;
+}
+
 .board-cell.has-image {
   background-size: 100% 100%;
 }

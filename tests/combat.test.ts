@@ -14,7 +14,7 @@ test("initializes the player and first wave", () => {
   assert.equal(state.status, "playing");
   assert.equal(state.enemy?.id, "forest-slime");
   assert.equal(state.enemy?.name, "森林史莱姆");
-  assert.equal(state.enemy?.hp, 30);
+  assert.equal(state.enemy?.hp, 60);
   assert.equal(state.enemy?.attackInterval, 0);
   assert.equal(state.enemy?.damage, 0);
 });
@@ -28,9 +28,9 @@ test("applies base damage from cleared pieces", () => {
   assert.deepEqual(events[0], {
     type: "enemyDamaged",
     amount: 6,
-    enemyHp: 24,
+    enemyHp: 54,
   });
-  assert.equal(state.enemy?.hp, 24);
+  assert.equal(state.enemy?.hp, 54);
 });
 
 test("does not let the first wave attack", () => {
@@ -161,7 +161,7 @@ test("sets status to won after the boss is defeated", () => {
     combat.applyPlayerMoveResult({ totalCleared: 100 });
   }
 
-  const events = combat.applyPlayerMoveResult({ totalCleared: 100 });
+  const events = combat.applyPlayerMoveResult({ totalCleared: 150 });
   const state = combat.getState();
 
   assert.equal(state.status, "won");

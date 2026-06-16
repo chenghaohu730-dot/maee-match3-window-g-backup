@@ -101,25 +101,30 @@ const fairyOverrides: Partial<
     fallbackLabel: "勇气",
   },
   yizai_hero_idle: {
+    available: true,
     fallbackClass: "asset-fallback fallback-fairy fallback-hero yizai-hero-idle",
     fallbackLabel: "亿仔勇者",
   },
   yizai_hero_attack: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-attack",
     fallbackLabel: "亿仔攻击",
   },
   yizai_hero_skill: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-skill",
     fallbackLabel: "亿仔技能",
   },
   yizai_hero_ultimate: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-ultimate",
     fallbackLabel: "亿仔大招",
   },
   yizai_hero_hurt: {
+    available: true,
     fallbackClass: "asset-fallback fallback-fairy fallback-hero yizai-hero-hurt",
     fallbackLabel: "亿仔受击",
   },

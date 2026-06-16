@@ -46,6 +46,39 @@ test("missing fallback image still resolves to a placeholder without throwing", 
   assert.equal(source.path, "");
 });
 
+test("static fallback image updates when animation state changes", () => {
+  const skin = withAvailableResources(fairySkin, [
+    "yizai_hero_idle",
+    "yizai_hero_attack",
+  ]);
+  const element = createFakeCharacterElement();
+  const animator = new CharacterAnimator({
+    characterId: "yizai",
+    configs: {
+      idle: YIZAI_ANIMATION_CONFIG.idle as SpriteAnimationConfig<string>,
+      attack: YIZAI_ANIMATION_CONFIG.attack as SpriteAnimationConfig<string>,
+    },
+    element,
+    skin,
+  });
+
+  assert.equal(animator.play("idle"), true);
+  assert.equal(element.dataset.assetKey, "yizai_hero_idle");
+  assert.equal(element.dataset.fallbackKey, "yizai_hero_idle");
+  assert.equal(
+    element.style.backgroundImage,
+    'url("/assets/fairy/yizai/yizai_hero_idle.png")',
+  );
+
+  assert.equal(animator.play("attack"), true);
+  assert.equal(element.dataset.assetKey, "yizai_hero_attack");
+  assert.equal(element.dataset.fallbackKey, "yizai_hero_attack");
+  assert.equal(
+    element.style.backgroundImage,
+    'url("/assets/fairy/yizai/yizai_hero_attack.png")',
+  );
+});
+
 test("frameEvents emit at their configured frame with anchor metadata", () => {
   const events: CharacterAnimationRuntimeEvent[] = [];
   const animator = new CharacterAnimator({
@@ -98,4 +131,40 @@ function withAvailableResources(
     ...skin,
     resources,
   };
+}
+
+function createFakeCharacterElement(): HTMLElement {
+  const dataset: Record<string, string> = {};
+  const classes = new Set<string>();
+  const styleValues = new Map<string, string>();
+  const style = {
+    backgroundImage: "",
+    backgroundPosition: "",
+    backgroundRepeat: "",
+    backgroundSize: "",
+    removeProperty: (name: string) => {
+      styleValues.delete(name);
+    },
+    setProperty: (name: string, value: string) => {
+      styleValues.set(name, value);
+    },
+  };
+
+  return {
+    dataset,
+    style,
+    classList: {
+      add: (...names: string[]) => {
+        for (const name of names) {
+          classes.add(name);
+        }
+      },
+      remove: (...names: string[]) => {
+        for (const name of names) {
+          classes.delete(name);
+        }
+      },
+    },
+    closest: () => null,
+  } as unknown as HTMLElement;
 }

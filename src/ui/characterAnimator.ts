@@ -206,6 +206,14 @@ export class CharacterAnimator<StateName extends string = string> {
     element.dataset.characterId = this.options.characterId;
     element.dataset.animationState = state;
     element.dataset.animationMode = source.mode;
+    element.dataset.assetKey = source.key;
+
+    if (source.fallbackKey) {
+      element.dataset.fallbackKey = source.fallbackKey;
+    } else {
+      delete element.dataset.fallbackKey;
+    }
+
     element.dataset.frameCount = String(config.frameCount);
     element.dataset.frameWidth = String(config.frameWidth);
     element.dataset.frameHeight = String(config.frameHeight);
@@ -224,6 +232,18 @@ export class CharacterAnimator<StateName extends string = string> {
     }
 
     element.classList.remove("character-sheet");
+
+    if (source.mode === "fallbackImage") {
+      element.style.setProperty("--asset-url", `url('${source.path}')`);
+      element.style.backgroundImage = `url("${source.path}")`;
+      element.style.backgroundPosition = "center";
+      element.style.backgroundRepeat = "no-repeat";
+      element.style.backgroundSize = "contain";
+      return;
+    }
+
+    element.style.removeProperty("--asset-url");
+    element.style.backgroundImage = "";
   }
 
   private updateElementFrame(frame: number): void {
@@ -413,7 +433,7 @@ function updateSlotStateClass(
   const prefix = characterId === "yizai" ? "yizai-state-" : "enemy-state-";
   const slot = element.closest(slotSelector);
 
-  if (!(slot instanceof HTMLElement)) {
+  if (!slot) {
     return;
   }
 
