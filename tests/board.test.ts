@@ -103,6 +103,42 @@ test("ensurePlayableBoard reshuffles dead boards into playable boards", () => {
   assert.equal(board.hasAvailableMove(), true);
 });
 
+test("ensurePlayableBoard repairs boards with holes even when moves remain", () => {
+  const types: (PieceType | null)[][] = playableTypes.map((row) => [...row]);
+  types[7]![7] = null;
+  const board = new Board({
+    initialTypes: types,
+    rng: fixedRng(0),
+  });
+
+  const changed = board.ensurePlayableBoard();
+
+  assert.equal(changed, true);
+  assert.equal(board.getSnapshot().length, 64);
+  assert.equal(board.hasHoles(), false);
+  assert.equal(board.detectMatches().length, 0);
+  assert.equal(board.hasAvailableMove(), true);
+});
+
+test("ensurePlayableBoard repairs boards with pre-existing matches", () => {
+  const types: PieceType[][] = playableTypes.map((row) => [...row]);
+  types[0]![0] = 0;
+  types[0]![1] = 0;
+  types[0]![2] = 0;
+  const board = new Board({
+    initialTypes: types,
+    rng: fixedRng(0),
+  });
+
+  const changed = board.ensurePlayableBoard();
+
+  assert.equal(changed, true);
+  assert.equal(board.getSnapshot().length, 64);
+  assert.equal(board.hasHoles(), false);
+  assert.equal(board.detectMatches().length, 0);
+  assert.equal(board.hasAvailableMove(), true);
+});
+
 test("rejects non-adjacent swaps", () => {
   const board = new Board({ initialTypes: stableTypes });
   const before = board.toTypes();
@@ -279,6 +315,24 @@ test("clearRandom board effect clears the requested count and refills", () => {
   const board = new Board({
     initialTypes: stableTypes,
     rng: fixedRng(0.18),
+    onClear: (event) => events.push(event),
+  });
+
+  const summary = board.applyBoardEffects([{ type: "clearRandom", count: 8 }]);
+
+  assert.equal(events[0]?.pieces.length, 8);
+  assert.equal(new Set(coordsOf(events[0]?.pieces ?? [])).size, 8);
+  assert.equal(summary.totalCleared >= 8, true);
+  assert.equal(board.hasHoles(), false);
+  assert.equal(board.detectMatches().length, 0);
+  assert.equal(board.hasAvailableMove(), true);
+});
+
+test("clearRandom clamps boundary rng values before selecting cells", () => {
+  const events: ClearEvent[] = [];
+  const board = new Board({
+    initialTypes: stableTypes,
+    rng: fixedRng(1),
     onClear: (event) => events.push(event),
   });
 

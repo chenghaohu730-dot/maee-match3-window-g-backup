@@ -20,7 +20,6 @@ import type {
   ParticleProjectile,
 } from "../src/ui/particleTypes.ts";
 
-const RED: PieceType = 0;
 const PURPLE: PieceType = 4;
 
 const playableTypes: PieceType[][] = [

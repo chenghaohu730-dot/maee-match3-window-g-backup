@@ -151,6 +151,7 @@ export function renderGameplayScene(model: GameplayViewModel): string {
   const { state } = model;
   const { skin } = model;
   const showTurnFeedback = model.showTurnFeedback ?? true;
+  const statusMessage = model.message || formatEventSummary(model.lastEvents);
 
   return renderPhoneFrame(
     skin,
@@ -190,6 +191,7 @@ export function renderGameplayScene(model: GameplayViewModel): string {
         </section>
 
         <footer class="bottom-status">
+          <div class="turn-message">${escapeHtml(statusMessage)}</div>
           <div class="bottom-score">最高分 ${model.progress.highestScore}</div>
           <button class="secondary-button compact" type="button" data-action="return-universe">返回宇宙</button>
         </footer>

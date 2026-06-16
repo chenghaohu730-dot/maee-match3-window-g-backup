@@ -1610,6 +1610,18 @@ p {
   white-space: nowrap;
 }
 
+.turn-message {
+  grid-column: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #526071;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bottom-score {
   grid-column: 2;
   justify-self: center;

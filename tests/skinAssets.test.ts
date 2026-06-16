@@ -218,6 +218,7 @@ test("passive gameplay renders do not replay previous skill effects", () => {
   assert.equal(html.includes("vfx_red_skill_slash"), false);
   assert.equal(html.includes("shake-medium"), false);
   assert.equal(html.includes("data-animation-state=\"hit\""), false);
+  assert.equal(html.includes("已选择 1,1。"), true);
 });
 
 test("enemy ids map to readable monster names and combat state classes", () => {

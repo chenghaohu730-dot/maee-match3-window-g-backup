@@ -22,7 +22,6 @@ import {
   applyScoreProgress,
   loadPlayerProgress,
   savePlayerProgress,
-  type PlayerProgress,
   type StorageLike,
 } from "./progressionStore.ts";
 import {

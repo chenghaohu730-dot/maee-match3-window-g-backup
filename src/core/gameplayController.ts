@@ -4,7 +4,7 @@ import {
   type ResolveSummary,
 } from "./board.ts";
 import { CombatSystem } from "./combat.ts";
-import type { CombatEvent, EnemyWave } from "./combatTypes.ts";
+import type { CombatEvent } from "./combatTypes.ts";
 import { SkillSystem } from "./skills.ts";
 import type { SkillLevel, SkillResolveResult } from "./skillTypes.ts";
 import type { VfxEvent } from "./vfxTypes.ts";

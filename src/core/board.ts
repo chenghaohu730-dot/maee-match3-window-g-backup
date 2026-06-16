@@ -252,7 +252,7 @@ export class Board {
   }
 
   ensurePlayableBoard(): boolean {
-    if (this.hasAvailableMove()) {
+    if (this.isPlayableStableBoard()) {
       return false;
     }
 
@@ -532,7 +532,7 @@ export class Board {
     );
 
     for (let index = 0; index < safeCount && candidates.length > 0; index++) {
-      const candidateIndex = Math.floor(this.rng() * candidates.length);
+      const candidateIndex = this.randomIndex(candidates.length);
       const [cell] = candidates.splice(candidateIndex, 1);
       if (cell) {
         this.addEffectCell(cell, selected);
@@ -725,7 +725,7 @@ export class Board {
   }
 
   private pickTypeWithoutImmediateMatch(x: number, y: number): PieceType {
-    const shuffled = [...PIECE_TYPES].sort(() => this.rng() - 0.5);
+    const shuffled = this.shuffleItems(PIECE_TYPES);
     const safeType = shuffled.find((type) => !this.wouldCreateMatch(x, y, type));
     return safeType ?? this.randomType();
   }
@@ -764,7 +764,7 @@ export class Board {
   }
 
   private randomType(): PieceType {
-    return PIECE_TYPES[Math.floor(this.rng() * PIECE_TYPES.length)] ?? 0;
+    return PIECE_TYPES[this.randomIndex(PIECE_TYPES.length)] ?? 0;
   }
 
   private exchange(a: Coord, b: Coord): void {
@@ -864,16 +864,46 @@ export class Board {
   }
 
   private shufflePieces(pieces: readonly Piece[]): Piece[] {
-    const shuffled = [...pieces];
+    return this.shuffleItems(pieces);
+  }
+
+  private shuffleItems<T>(items: readonly T[]): T[] {
+    const shuffled = [...items];
 
     for (let index = shuffled.length - 1; index > 0; index--) {
-      const swapIndex = Math.floor(this.rng() * (index + 1));
+      const swapIndex = this.randomIndex(index + 1);
       const current = shuffled[index]!;
       shuffled[index] = shuffled[swapIndex]!;
       shuffled[swapIndex] = current;
     }
 
     return shuffled;
+  }
+
+  private randomIndex(length: number): number {
+    if (length <= 1) {
+      return 0;
+    }
+
+    return Math.floor(this.randomFraction() * length);
+  }
+
+  private randomFraction(): number {
+    const value = this.rng();
+
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+
+    if (value <= 0) {
+      return 0;
+    }
+
+    if (value >= 1) {
+      return 1 - Number.EPSILON;
+    }
+
+    return value;
   }
 
   private placePieces(pieces: readonly Piece[]): void {
