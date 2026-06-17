@@ -282,121 +282,145 @@ const fairyOverrides: Partial<
     fallbackLabel: "森林史莱姆退场序列帧",
   },
   monster_pumpkin_idle: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-pumpkin-card",
     fallbackLabel: "南瓜小妖",
   },
   monster_pumpkin_hit: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-pumpkin-card",
     fallbackLabel: "南瓜小妖受击",
   },
   monster_pumpkin_attack: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-pumpkin-card",
     fallbackLabel: "南瓜小妖攻击",
   },
   monster_pumpkin_defeat: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-pumpkin-card",
     fallbackLabel: "南瓜小妖退场",
   },
   monster_crow_idle: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-crow-card",
     fallbackLabel: "童话乌鸦",
   },
   monster_crow_hit: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-crow-card",
     fallbackLabel: "童话乌鸦受击",
   },
   monster_crow_attack: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-crow-card",
     fallbackLabel: "童话乌鸦攻击",
   },
   monster_crow_defeat: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-crow-card",
     fallbackLabel: "童话乌鸦退场",
   },
   monster_tree_idle: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-tree-card",
     fallbackLabel: "森林树精",
   },
   monster_tree_hit: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-tree-card",
     fallbackLabel: "森林树精受击",
   },
   monster_tree_attack: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-tree-card",
     fallbackLabel: "森林树精攻击",
   },
   monster_tree_defeat: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-tree-card",
     fallbackLabel: "森林树精退场",
   },
   monster_wolf_idle: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-wolf-card",
     fallbackLabel: "森林狼",
   },
   monster_wolf_hit: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-wolf-card",
     fallbackLabel: "森林狼受击",
   },
   monster_wolf_attack: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-wolf-card",
     fallbackLabel: "森林狼攻击",
   },
   monster_wolf_defeat: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-wolf-card",
     fallbackLabel: "森林狼退场",
   },
   boss_dragon_idle: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster boss-dragon-card",
     fallbackLabel: "童话龙王",
   },
   boss_dragon_hit: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster boss-dragon-card",
     fallbackLabel: "童话龙王受击",
   },
   boss_dragon_attack: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster boss-dragon-card",
     fallbackLabel: "童话龙王攻击",
   },
   boss_dragon_defeat: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster boss-dragon-card",
     fallbackLabel: "童话龙王退场",
   },
   boss_demon_king_idle: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster boss-demon-king-card",
     fallbackLabel: "魔王",
   },
   boss_demon_king_hit: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster boss-demon-king-card",
     fallbackLabel: "魔王受击",
   },
   boss_demon_king_attack: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster boss-demon-king-card",
     fallbackLabel: "魔王攻击",
   },
   boss_demon_king_defeat: {
+    available: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster boss-demon-king-card",
     fallbackLabel: "魔王退场",

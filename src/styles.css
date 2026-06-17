@@ -2437,8 +2437,9 @@ p {
   }
 
   100% {
-    opacity: 0.25;
-    transform: translateY(12px) scale(0.86);
+    opacity: 0.82;
+    transform: translateY(10px) scale(0.9);
+    filter: brightness(0.88) saturate(0.92);
   }
 }
 

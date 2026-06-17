@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import test from "node:test";
 import { resolve, sep } from "node:path";
 import type { AssetKey } from "../src/assets/assetManifest.ts";
@@ -137,6 +138,89 @@ const FORMAL_MONSTER_SLIME_KEYS = [
   "monster_slime_defeat",
 ] as const satisfies readonly AssetKey[];
 
+const FORMAL_FAIRY_MONSTER_KEYS = [
+  ...FORMAL_MONSTER_SLIME_KEYS,
+  "monster_pumpkin_idle",
+  "monster_pumpkin_hit",
+  "monster_pumpkin_attack",
+  "monster_pumpkin_defeat",
+  "monster_crow_idle",
+  "monster_crow_hit",
+  "monster_crow_attack",
+  "monster_crow_defeat",
+  "monster_tree_idle",
+  "monster_tree_hit",
+  "monster_tree_attack",
+  "monster_tree_defeat",
+  "monster_wolf_idle",
+  "monster_wolf_hit",
+  "monster_wolf_attack",
+  "monster_wolf_defeat",
+  "boss_dragon_idle",
+  "boss_dragon_hit",
+  "boss_dragon_attack",
+  "boss_dragon_defeat",
+  "boss_demon_king_idle",
+  "boss_demon_king_hit",
+  "boss_demon_king_attack",
+  "boss_demon_king_defeat",
+] as const satisfies readonly AssetKey[];
+
+const FORMAL_FAIRY_MONSTER_STATES = {
+  forest_slime: {
+    name: "森林史莱姆",
+    idle: "monster_slime_idle",
+    hit: "monster_slime_hit",
+    attack: "monster_slime_attack",
+    defeat: "monster_slime_defeat",
+  },
+  pumpkin_imp: {
+    name: "南瓜小妖",
+    idle: "monster_pumpkin_idle",
+    hit: "monster_pumpkin_hit",
+    attack: "monster_pumpkin_attack",
+    defeat: "monster_pumpkin_defeat",
+  },
+  fairy_crow: {
+    name: "童话乌鸦",
+    idle: "monster_crow_idle",
+    hit: "monster_crow_hit",
+    attack: "monster_crow_attack",
+    defeat: "monster_crow_defeat",
+  },
+  tree_spirit: {
+    name: "森林树精",
+    idle: "monster_tree_idle",
+    hit: "monster_tree_hit",
+    attack: "monster_tree_attack",
+    defeat: "monster_tree_defeat",
+  },
+  forest_wolf: {
+    name: "森林狼",
+    idle: "monster_wolf_idle",
+    hit: "monster_wolf_hit",
+    attack: "monster_wolf_attack",
+    defeat: "monster_wolf_defeat",
+  },
+  fairy_dragon_boss: {
+    name: "童话龙王",
+    idle: "boss_dragon_idle",
+    hit: "boss_dragon_hit",
+    attack: "boss_dragon_attack",
+    defeat: "boss_dragon_defeat",
+  },
+  endless_demon_king: {
+    name: "魔王",
+    idle: "boss_demon_king_idle",
+    hit: "boss_demon_king_hit",
+    attack: "boss_demon_king_attack",
+    defeat: "boss_demon_king_defeat",
+  },
+} as const satisfies Record<
+  string,
+  { name: string } & Record<EnemyAnimationState, AssetKey>
+>;
+
 const FORMAL_READY_KEYS = [
   ...FORMAL_PIECE_KEYS,
   ...FORMAL_BOARD_KEYS,
@@ -144,7 +228,7 @@ const FORMAL_READY_KEYS = [
   ...FORMAL_YIZAI_HERO_KEYS,
   ...PRO_YIZAI_SHEET_KEYS,
   ...LEGACY_YIZAI_SHEET_KEYS,
-  ...FORMAL_MONSTER_SLIME_KEYS,
+  ...FORMAL_FAIRY_MONSTER_KEYS,
 ] as const satisfies readonly AssetKey[];
 
 test("fairySkin has paths for every first-batch fairy MVP asset", () => {
@@ -426,6 +510,82 @@ test("formal forest slime fallback images render for every enemy state", () => {
     assert.equal(html.includes(`data-fallback-key="${key}"`), true);
     assert.equal(html.includes(`url('${resource.path}')`), true);
   }
+});
+
+test("formal fairy monster images are available on disk", () => {
+  const publicRoot = resolve(process.cwd(), "public");
+
+  for (const key of FORMAL_FAIRY_MONSTER_KEYS) {
+    const resource = fairySkin.resources[key];
+    const publicPath = resolve(
+      publicRoot,
+      resource.path.slice(1).replaceAll("/", sep),
+    );
+
+    assert.equal(resource.available, true, `${key} should be enabled`);
+    assert.equal(hasImageResource(resource), true, `${key} should be renderable`);
+    assert.equal(existsSync(publicPath), true, `${key} should exist on disk`);
+  }
+});
+
+test("formal fairy monster waves render their state assets", () => {
+  for (const [enemyId, spec] of Object.entries(FORMAL_FAIRY_MONSTER_STATES)) {
+    for (const state of ["idle", "hit", "attack", "defeat"] as const) {
+      const key = spec[state];
+      const resource = fairySkin.resources[key];
+      const html = renderGameplayScene({
+        ...createGameplayModel(fairySkin),
+        state: {
+          ...createGameplayState(),
+          enemyId,
+          enemyName: spec.name,
+          enemyHp:
+            enemyId === "endless_demon_king" ? Number.POSITIVE_INFINITY : 24,
+          enemyMaxHp:
+            enemyId === "endless_demon_king" ? Number.POSITIVE_INFINITY : 30,
+          enemyInfiniteHp: enemyId === "endless_demon_king",
+          isEndlessWave: enemyId === "endless_demon_king",
+        },
+        characterAnimations: {
+          yizai: "idle",
+          enemy: state,
+        },
+      });
+
+      assert.equal(html.includes(`data-enemy-id="${enemyId}"`), true);
+      assert.equal(html.includes(spec.name), true);
+      assert.equal(html.includes(`data-animation-state="${state}"`), true);
+      assert.equal(html.includes(`data-asset-key="${key}"`), true);
+      assert.equal(html.includes(`data-enemy-asset-${state}="${key}"`), true);
+      assert.equal(html.includes(`data-sprite-key="${key}"`), true);
+      assert.equal(html.includes(`url('${resource.path}')`), true);
+      assert.equal(html.includes("data-static-only=\"true\""), true);
+    }
+  }
+});
+
+test("missing formal monster images keep the correct name and slime fallback", () => {
+  const skin = withUnavailableResources(fairySkin, ["monster_wolf_attack"]);
+  const html = renderGameplayScene({
+    ...createGameplayModel(skin),
+    state: {
+      ...createGameplayState(),
+      enemyId: "forest_wolf",
+      enemyName: "森林狼",
+    },
+    characterAnimations: {
+      yizai: "idle",
+      enemy: "attack",
+    },
+  });
+
+  assert.equal(html.includes("森林狼"), true);
+  assert.equal(html.includes("data-asset-key=\"monster_wolf_attack\""), true);
+  assert.equal(html.includes("data-fallback-key=\"monster_slime_attack\""), true);
+  assert.equal(
+    html.includes("url('/assets/fairy/monsters/monster_wolf_attack.png')"),
+    false,
+  );
 });
 
 test("missing remaining first-batch fairy MVP images stay on fallback", () => {
