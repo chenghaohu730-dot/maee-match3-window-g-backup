@@ -213,6 +213,12 @@ export class CharacterAnimator<StateName extends string = string> {
     element.dataset.animationMode = source.mode;
     element.dataset.assetKey = source.key;
 
+    if (config.fallbackSheetKey) {
+      element.dataset.fallbackSheetKey = config.fallbackSheetKey;
+    } else {
+      delete element.dataset.fallbackSheetKey;
+    }
+
     if (source.fallbackKey) {
       element.dataset.fallbackKey = source.fallbackKey;
     } else {
@@ -345,7 +351,7 @@ export function resolveCharacterAnimationSource(
   if (!skin) {
     return {
       mode: "placeholder",
-      key: config.fallbackKey ?? config.key,
+      key: config.fallbackKey ?? config.fallbackSheetKey ?? config.key,
       path: "",
     };
   }
@@ -353,19 +359,20 @@ export function resolveCharacterAnimationSource(
   const sheetResource = getSkinResource(skin, config.key);
 
   if (hasImageResource(sheetResource)) {
-    const source: CharacterAnimationSource = {
-      mode: "sheet",
-      key: config.key,
-      path: sheetResource.path,
-    };
+    return createSheetSource(config.key, sheetResource.path, config, skin);
+  }
 
-    if (config.fallbackKey) {
-      const fallbackResource = getSkinResource(skin, config.fallbackKey);
-      source.fallbackKey = config.fallbackKey;
-      source.fallbackPath = fallbackResource.path;
+  if (config.fallbackSheetKey) {
+    const fallbackSheetResource = getSkinResource(skin, config.fallbackSheetKey);
+
+    if (hasImageResource(fallbackSheetResource)) {
+      return createSheetSource(
+        config.fallbackSheetKey,
+        fallbackSheetResource.path,
+        config,
+        skin,
+      );
     }
-
-    return source;
   }
 
   if (config.fallbackKey) {
@@ -384,9 +391,36 @@ export function resolveCharacterAnimationSource(
 
   return {
     mode: "placeholder",
-    key: config.fallbackKey ?? config.key,
+    key: config.fallbackKey ?? config.fallbackSheetKey ?? config.key,
     path: "",
   };
+}
+
+function createSheetSource(
+  key: SpriteAnimationConfig["key"],
+  path: string,
+  config: SpriteAnimationConfig,
+  skin: Match3Skin,
+): CharacterAnimationSource {
+  const source: CharacterAnimationSource = {
+    mode: "sheet",
+    key,
+    path,
+  };
+
+  if (config.fallbackSheetKey) {
+    const fallbackSheetResource = getSkinResource(skin, config.fallbackSheetKey);
+    source.fallbackSheetKey = config.fallbackSheetKey;
+    source.fallbackSheetPath = fallbackSheetResource.path;
+  }
+
+  if (config.fallbackKey) {
+    const fallbackResource = getSkinResource(skin, config.fallbackKey);
+    source.fallbackKey = config.fallbackKey;
+    source.fallbackPath = fallbackResource.path;
+  }
+
+  return source;
 }
 
 function getConfigMap(

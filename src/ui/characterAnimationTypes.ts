@@ -59,6 +59,7 @@ export interface CharacterAnimationAlignment {
 
 export interface SpriteAnimationConfig<StateName extends string = string> {
   key: AssetKey;
+  fallbackSheetKey?: AssetKey;
   fallbackKey?: AssetKey;
   frameWidth: number;
   frameHeight: number;
@@ -96,6 +97,8 @@ export interface CharacterAnimationSource {
   mode: "sheet" | "fallbackImage" | "placeholder";
   key: AssetKey;
   path: string;
+  fallbackSheetKey?: AssetKey;
+  fallbackSheetPath?: string;
   fallbackKey?: AssetKey;
   fallbackPath?: string;
 }

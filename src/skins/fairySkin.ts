@@ -128,32 +128,82 @@ const fairyOverrides: Partial<
     fallbackClass: "asset-fallback fallback-fairy fallback-hero yizai-hero-hurt",
     fallbackLabel: "亿仔受击",
   },
+  yizai_hero_idle_sheet_pro: {
+    available: false,
+    productionTier: "pro",
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-idle-sheet-pro",
+    fallbackLabel: "亿仔待机生产版序列帧",
+  },
+  yizai_hero_attack_sheet_pro: {
+    available: false,
+    productionTier: "pro",
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-attack-sheet-pro",
+    fallbackLabel: "亿仔攻击生产版序列帧",
+  },
+  yizai_hero_skill_sheet_pro: {
+    available: false,
+    productionTier: "pro",
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-skill-sheet-pro",
+    fallbackLabel: "亿仔技能生产版序列帧",
+  },
+  yizai_hero_ultimate_sheet_pro: {
+    available: false,
+    productionTier: "pro",
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-ultimate-sheet-pro",
+    fallbackLabel: "亿仔大招生产版序列帧",
+  },
+  yizai_hero_hurt_sheet_pro: {
+    available: false,
+    productionTier: "pro",
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-hero yizai-hero-hurt-sheet-pro",
+    fallbackLabel: "亿仔受击生产版序列帧",
+  },
   yizai_hero_idle_sheet: {
     available: true,
+    productionTier: "legacy-ai",
+    legacyAiSheet: true,
+    deprecated: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-idle-sheet",
     fallbackLabel: "亿仔待机序列帧",
   },
   yizai_hero_attack_sheet: {
     available: true,
+    productionTier: "legacy-ai",
+    legacyAiSheet: true,
+    deprecated: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-attack-sheet",
     fallbackLabel: "亿仔攻击序列帧",
   },
   yizai_hero_skill_sheet: {
     available: true,
+    productionTier: "legacy-ai",
+    legacyAiSheet: true,
+    deprecated: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-skill-sheet",
     fallbackLabel: "亿仔技能序列帧",
   },
   yizai_hero_ultimate_sheet: {
     available: true,
+    productionTier: "legacy-ai",
+    legacyAiSheet: true,
+    deprecated: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-ultimate-sheet",
     fallbackLabel: "亿仔大招序列帧",
   },
   yizai_hero_hurt_sheet: {
     available: true,
+    productionTier: "legacy-ai",
+    legacyAiSheet: true,
+    deprecated: true,
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-hurt-sheet",
     fallbackLabel: "亿仔受击序列帧",
@@ -181,6 +231,34 @@ const fairyOverrides: Partial<
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-slime-card",
     fallbackLabel: "森林史莱姆退场",
+  },
+  monster_slime_idle_sheet_pro: {
+    available: false,
+    productionTier: "pro",
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-slime-sheet-pro",
+    fallbackLabel: "森林史莱姆待机生产版序列帧",
+  },
+  monster_slime_hit_sheet_pro: {
+    available: false,
+    productionTier: "pro",
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-slime-sheet-pro",
+    fallbackLabel: "森林史莱姆受击生产版序列帧",
+  },
+  monster_slime_attack_sheet_pro: {
+    available: false,
+    productionTier: "pro",
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-slime-sheet-pro",
+    fallbackLabel: "森林史莱姆攻击生产版序列帧",
+  },
+  monster_slime_defeat_sheet_pro: {
+    available: false,
+    productionTier: "pro",
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-slime-sheet-pro",
+    fallbackLabel: "森林史莱姆退场生产版序列帧",
   },
   monster_slime_idle_sheet: {
     fallbackClass:

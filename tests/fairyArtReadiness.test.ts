@@ -32,6 +32,26 @@ const FAIRY_MVP_ASSETS = [
   ["yizai_hero_skill", "/assets/fairy/yizai/yizai_hero_skill.png"],
   ["yizai_hero_ultimate", "/assets/fairy/yizai/yizai_hero_ultimate.png"],
   ["yizai_hero_hurt", "/assets/fairy/yizai/yizai_hero_hurt.png"],
+  [
+    "yizai_hero_idle_sheet_pro",
+    "/assets/fairy/yizai/pro/yizai_hero_idle_sheet.png",
+  ],
+  [
+    "yizai_hero_attack_sheet_pro",
+    "/assets/fairy/yizai/pro/yizai_hero_attack_sheet.png",
+  ],
+  [
+    "yizai_hero_skill_sheet_pro",
+    "/assets/fairy/yizai/pro/yizai_hero_skill_sheet.png",
+  ],
+  [
+    "yizai_hero_ultimate_sheet_pro",
+    "/assets/fairy/yizai/pro/yizai_hero_ultimate_sheet.png",
+  ],
+  [
+    "yizai_hero_hurt_sheet_pro",
+    "/assets/fairy/yizai/pro/yizai_hero_hurt_sheet.png",
+  ],
   ["yizai_hero_idle_sheet", "/assets/fairy/yizai/yizai_hero_idle_sheet.png"],
   [
     "yizai_hero_attack_sheet",
@@ -47,6 +67,22 @@ const FAIRY_MVP_ASSETS = [
   ["monster_slime_hit", "/assets/fairy/monsters/monster_slime_hit.png"],
   ["monster_slime_attack", "/assets/fairy/monsters/monster_slime_attack.png"],
   ["monster_slime_defeat", "/assets/fairy/monsters/monster_slime_defeat.png"],
+  [
+    "monster_slime_idle_sheet_pro",
+    "/assets/fairy/monsters/pro/monster_slime_idle_sheet.png",
+  ],
+  [
+    "monster_slime_hit_sheet_pro",
+    "/assets/fairy/monsters/pro/monster_slime_hit_sheet.png",
+  ],
+  [
+    "monster_slime_attack_sheet_pro",
+    "/assets/fairy/monsters/pro/monster_slime_attack_sheet.png",
+  ],
+  [
+    "monster_slime_defeat_sheet_pro",
+    "/assets/fairy/monsters/pro/monster_slime_defeat_sheet.png",
+  ],
 ] as const satisfies readonly (readonly [AssetKey, string])[];
 
 const FORMAL_PIECE_KEYS = [
@@ -78,7 +114,15 @@ const FORMAL_YIZAI_HERO_KEYS = [
   "yizai_hero_hurt",
 ] as const satisfies readonly AssetKey[];
 
-const FORMAL_YIZAI_SHEET_KEYS = [
+const PRO_YIZAI_SHEET_KEYS = [
+  "yizai_hero_idle_sheet_pro",
+  "yizai_hero_attack_sheet_pro",
+  "yizai_hero_skill_sheet_pro",
+  "yizai_hero_ultimate_sheet_pro",
+  "yizai_hero_hurt_sheet_pro",
+] as const satisfies readonly AssetKey[];
+
+const LEGACY_YIZAI_SHEET_KEYS = [
   "yizai_hero_idle_sheet",
   "yizai_hero_attack_sheet",
   "yizai_hero_skill_sheet",
@@ -98,7 +142,7 @@ const FORMAL_READY_KEYS = [
   ...FORMAL_BOARD_KEYS,
   ...FORMAL_BACKGROUND_KEYS,
   ...FORMAL_YIZAI_HERO_KEYS,
-  ...FORMAL_YIZAI_SHEET_KEYS,
+  ...LEGACY_YIZAI_SHEET_KEYS,
   ...FORMAL_MONSTER_SLIME_KEYS,
 ] as const satisfies readonly AssetKey[];
 
@@ -197,7 +241,7 @@ test("formal fairy background images render by default", () => {
   );
 });
 
-test("formal yizai hero sheets render by default", () => {
+test("pro yizai keys exist and legacy yizai sheets remain fallback-ready", () => {
   for (const key of FORMAL_YIZAI_HERO_KEYS) {
     const resource = fairySkin.resources[key];
 
@@ -205,10 +249,21 @@ test("formal yizai hero sheets render by default", () => {
     assert.equal(hasImageResource(resource), true);
   }
 
-  for (const key of FORMAL_YIZAI_SHEET_KEYS) {
+  for (const key of PRO_YIZAI_SHEET_KEYS) {
+    const resource = fairySkin.resources[key];
+
+    assert.equal(resource.available, false);
+    assert.equal(resource.productionTier, "pro");
+    assert.equal(hasImageResource(resource), false);
+  }
+
+  for (const key of LEGACY_YIZAI_SHEET_KEYS) {
     const resource = fairySkin.resources[key];
 
     assert.equal(resource.available, true);
+    assert.equal(resource.productionTier, "legacy-ai");
+    assert.equal(resource.legacyAiSheet, true);
+    assert.equal(resource.deprecated, true);
     assert.equal(hasImageResource(resource), true);
   }
 
@@ -224,12 +279,19 @@ test("formal yizai hero sheets render by default", () => {
     html.includes("url('/assets/fairy/yizai/yizai_hero_idle_sheet.png')"),
     true,
   );
-  assert.equal(html.includes("data-sprite-key=\"yizai_hero_idle_sheet\""), true);
+  assert.equal(
+    html.includes("data-sprite-key=\"yizai_hero_idle_sheet_pro\""),
+    true,
+  );
+  assert.equal(
+    html.includes("data-fallback-sheet-key=\"yizai_hero_idle_sheet\""),
+    true,
+  );
   assert.equal(html.includes("data-frame-count=\"4\""), true);
   assert.equal(html.includes("data-fallback-key=\"yizai_hero_idle\""), true);
 });
 
-test("formal yizai attack sheet renders with 6 horizontal frames", () => {
+test("legacy yizai attack sheet renders with 6 horizontal frames when pro is absent", () => {
   const resource = fairySkin.resources.yizai_hero_attack_sheet;
   const html = renderGameplayScene({
     ...createGameplayModel(fairySkin),
@@ -243,7 +305,11 @@ test("formal yizai attack sheet renders with 6 horizontal frames", () => {
   assert.equal(hasImageResource(resource), true);
   assert.equal(html.includes("data-animation-state=\"attack\""), true);
   assert.equal(
-    html.includes("data-sprite-key=\"yizai_hero_attack_sheet\""),
+    html.includes("data-sprite-key=\"yizai_hero_attack_sheet_pro\""),
+    true,
+  );
+  assert.equal(
+    html.includes("data-fallback-sheet-key=\"yizai_hero_attack_sheet\""),
     true,
   );
   assert.equal(html.includes("data-frame-count=\"6\""), true);
@@ -256,7 +322,7 @@ test("formal yizai attack sheet renders with 6 horizontal frames", () => {
   );
 });
 
-test("formal yizai skill and ultimate sheets render as horizontal animations", () => {
+test("legacy yizai skill and ultimate sheets render when pro is absent", () => {
   const skillHtml = renderGameplayScene({
     ...createGameplayModel(fairySkin),
     characterAnimations: {
@@ -272,7 +338,14 @@ test("formal yizai skill and ultimate sheets render as horizontal animations", (
     },
   });
 
-  assert.equal(skillHtml.includes("data-sprite-key=\"yizai_hero_skill_sheet\""), true);
+  assert.equal(
+    skillHtml.includes("data-sprite-key=\"yizai_hero_skill_sheet_pro\""),
+    true,
+  );
+  assert.equal(
+    skillHtml.includes("data-fallback-sheet-key=\"yizai_hero_skill_sheet\""),
+    true,
+  );
   assert.equal(skillHtml.includes("data-frame-count=\"8\""), true);
   assert.equal(skillHtml.includes("data-fallback-key=\"yizai_hero_skill\""), true);
   assert.equal(
@@ -280,7 +353,13 @@ test("formal yizai skill and ultimate sheets render as horizontal animations", (
     true,
   );
   assert.equal(
-    ultimateHtml.includes("data-sprite-key=\"yizai_hero_ultimate_sheet\""),
+    ultimateHtml.includes("data-sprite-key=\"yizai_hero_ultimate_sheet_pro\""),
+    true,
+  );
+  assert.equal(
+    ultimateHtml.includes(
+      "data-fallback-sheet-key=\"yizai_hero_ultimate_sheet\"",
+    ),
     true,
   );
   assert.equal(ultimateHtml.includes("data-frame-count=\"10\""), true);
@@ -384,7 +463,10 @@ test("available first-batch fairy MVP images render asset URLs", () => {
     html.includes("url('/assets/fairy/yizai/yizai_hero_idle_sheet.png')"),
     true,
   );
-  assert.equal(html.includes("data-sprite-key=\"yizai_hero_idle_sheet\""), true);
+  assert.equal(
+    html.includes("data-sprite-key=\"yizai_hero_idle_sheet_pro\""),
+    true,
+  );
   assert.equal(
     html.includes("url('/assets/fairy/monsters/monster_slime_idle.png')"),
     true,

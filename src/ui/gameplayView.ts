@@ -990,6 +990,12 @@ function characterAnimationAttrs(
     attrs.push(`data-fallback-key="${escapeHtml(config.fallbackKey)}"`);
   }
 
+  if (config.fallbackSheetKey) {
+    attrs.push(
+      `data-fallback-sheet-key="${escapeHtml(config.fallbackSheetKey)}"`,
+    );
+  }
+
   if (config.returnTo) {
     attrs.push(`data-return-to="${escapeHtml(config.returnTo)}"`);
   }

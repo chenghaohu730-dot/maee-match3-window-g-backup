@@ -31,25 +31,7 @@ test("missing sprite sheet uses the static fallback key when available", () => {
   assert.equal(source.path, "/assets/fairy/yizai/yizai_hero_attack.png");
 });
 
-test("missing fallback image still resolves to a placeholder without throwing", () => {
-  const skin = withAvailableResources(fairySkin, []);
-  const config: SpriteAnimationConfig = {
-    key: "yizai_hero_attack_sheet",
-    frameWidth: 512,
-    frameHeight: 512,
-    frameCount: 6,
-    fps: 12,
-    loop: false,
-    priority: 10,
-  };
-  const source = resolveCharacterAnimationSource(config, skin);
-
-  assert.equal(source.mode, "placeholder");
-  assert.equal(source.key, "yizai_hero_attack_sheet");
-  assert.equal(source.path, "");
-});
-
-test("available attack sprite sheet resolves before the static fallback", () => {
+test("missing pro sheet uses the legacy sprite sheet before static fallback", () => {
   const skin = withAvailableResources(fairySkin, [
     "yizai_hero_attack_sheet",
     "yizai_hero_attack",
@@ -62,6 +44,48 @@ test("available attack sprite sheet resolves before the static fallback", () => 
   assert.equal(source.mode, "sheet");
   assert.equal(source.key, "yizai_hero_attack_sheet");
   assert.equal(source.path, "/assets/fairy/yizai/yizai_hero_attack_sheet.png");
+  assert.equal(source.fallbackSheetKey, "yizai_hero_attack_sheet");
+  assert.equal(source.fallbackKey, "yizai_hero_attack");
+});
+
+test("missing fallback image still resolves to a placeholder without throwing", () => {
+  const skin = withAvailableResources(fairySkin, []);
+  const config: SpriteAnimationConfig = {
+    key: "yizai_hero_attack_sheet_pro",
+    fallbackSheetKey: "yizai_hero_attack_sheet",
+    fallbackKey: "yizai_hero_attack",
+    frameWidth: 512,
+    frameHeight: 512,
+    frameCount: 6,
+    fps: 12,
+    loop: false,
+    priority: 10,
+  };
+  const source = resolveCharacterAnimationSource(config, skin);
+
+  assert.equal(source.mode, "placeholder");
+  assert.equal(source.key, "yizai_hero_attack");
+  assert.equal(source.path, "");
+});
+
+test("available pro attack sprite sheet resolves before every fallback", () => {
+  const skin = withAvailableResources(fairySkin, [
+    "yizai_hero_attack_sheet_pro",
+    "yizai_hero_attack_sheet",
+    "yizai_hero_attack",
+  ]);
+  const source = resolveCharacterAnimationSource(
+    YIZAI_ANIMATION_CONFIG.attack,
+    skin,
+  );
+
+  assert.equal(source.mode, "sheet");
+  assert.equal(source.key, "yizai_hero_attack_sheet_pro");
+  assert.equal(
+    source.path,
+    "/assets/fairy/yizai/pro/yizai_hero_attack_sheet.png",
+  );
+  assert.equal(source.fallbackSheetKey, "yizai_hero_attack_sheet");
   assert.equal(source.fallbackKey, "yizai_hero_attack");
   assert.equal(source.fallbackPath, "/assets/fairy/yizai/yizai_hero_attack.png");
 });
@@ -86,6 +110,7 @@ test("sprite sheet image updates when animation state changes", () => {
 
   assert.equal(animator.play("idle"), true);
   assert.equal(element.dataset.assetKey, "yizai_hero_idle_sheet");
+  assert.equal(element.dataset.fallbackSheetKey, "yizai_hero_idle_sheet");
   assert.equal(element.dataset.fallbackKey, "yizai_hero_idle");
   assert.equal(element.style.backgroundSize, "400% 100%");
   assert.equal(
@@ -95,6 +120,7 @@ test("sprite sheet image updates when animation state changes", () => {
 
   assert.equal(animator.play("attack"), true);
   assert.equal(element.dataset.assetKey, "yizai_hero_attack_sheet");
+  assert.equal(element.dataset.fallbackSheetKey, "yizai_hero_attack_sheet");
   assert.equal(element.dataset.fallbackKey, "yizai_hero_attack");
   assert.equal(element.style.backgroundSize, "600% 100%");
   assert.equal(
@@ -172,6 +198,18 @@ test("yizai sheets use attack as the feet alignment baseline", () => {
       YIZAI_ATTACK_ALIGNMENT,
     );
   }
+});
+
+test("yizai animation config carries pro and legacy fallback sheet keys", () => {
+  assert.equal(
+    YIZAI_ANIMATION_CONFIG.attack.key,
+    "yizai_hero_attack_sheet_pro",
+  );
+  assert.equal(
+    YIZAI_ANIMATION_CONFIG.attack.fallbackSheetKey,
+    "yizai_hero_attack_sheet",
+  );
+  assert.equal(YIZAI_ANIMATION_CONFIG.attack.fallbackKey, "yizai_hero_attack");
 });
 
 test("animation duration is derived from frame count and fps", () => {

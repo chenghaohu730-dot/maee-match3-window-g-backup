@@ -33,6 +33,16 @@ export const ASSET_MANIFEST = {
   yizai_hero_skill: "/assets/fairy/yizai/yizai_hero_skill.png",
   yizai_hero_ultimate: "/assets/fairy/yizai/yizai_hero_ultimate.png",
   yizai_hero_hurt: "/assets/fairy/yizai/yizai_hero_hurt.png",
+  yizai_hero_idle_sheet_pro:
+    "/assets/fairy/yizai/pro/yizai_hero_idle_sheet.png",
+  yizai_hero_attack_sheet_pro:
+    "/assets/fairy/yizai/pro/yizai_hero_attack_sheet.png",
+  yizai_hero_skill_sheet_pro:
+    "/assets/fairy/yizai/pro/yizai_hero_skill_sheet.png",
+  yizai_hero_ultimate_sheet_pro:
+    "/assets/fairy/yizai/pro/yizai_hero_ultimate_sheet.png",
+  yizai_hero_hurt_sheet_pro:
+    "/assets/fairy/yizai/pro/yizai_hero_hurt_sheet.png",
   yizai_hero_idle_sheet: "/assets/fairy/yizai/yizai_hero_idle_sheet.png",
   yizai_hero_attack_sheet: "/assets/fairy/yizai/yizai_hero_attack_sheet.png",
   yizai_hero_skill_sheet: "/assets/fairy/yizai/yizai_hero_skill_sheet.png",
@@ -44,6 +54,14 @@ export const ASSET_MANIFEST = {
   monster_slime_hit: "/assets/fairy/monsters/monster_slime_hit.png",
   monster_slime_attack: "/assets/fairy/monsters/monster_slime_attack.png",
   monster_slime_defeat: "/assets/fairy/monsters/monster_slime_defeat.png",
+  monster_slime_idle_sheet_pro:
+    "/assets/fairy/monsters/pro/monster_slime_idle_sheet.png",
+  monster_slime_hit_sheet_pro:
+    "/assets/fairy/monsters/pro/monster_slime_hit_sheet.png",
+  monster_slime_attack_sheet_pro:
+    "/assets/fairy/monsters/pro/monster_slime_attack_sheet.png",
+  monster_slime_defeat_sheet_pro:
+    "/assets/fairy/monsters/pro/monster_slime_defeat_sheet.png",
   monster_slime_idle_sheet:
     "/assets/fairy/monsters/monster_slime_idle_sheet.png",
   monster_slime_hit_sheet:

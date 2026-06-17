@@ -21,7 +21,8 @@ export const YIZAI_ATTACK_ALIGNMENT: CharacterAnimationAlignment = {
 
 export const YIZAI_ANIMATION_CONFIG = {
   idle: {
-    key: "yizai_hero_idle_sheet",
+    key: "yizai_hero_idle_sheet_pro",
+    fallbackSheetKey: "yizai_hero_idle_sheet",
     fallbackKey: "yizai_hero_idle",
     frameWidth: 512,
     frameHeight: 512,
@@ -32,7 +33,8 @@ export const YIZAI_ANIMATION_CONFIG = {
     alignment: YIZAI_ATTACK_ALIGNMENT,
   },
   attack: {
-    key: "yizai_hero_attack_sheet",
+    key: "yizai_hero_attack_sheet_pro",
+    fallbackSheetKey: "yizai_hero_attack_sheet",
     fallbackKey: "yizai_hero_attack",
     frameWidth: 512,
     frameHeight: 512,
@@ -52,7 +54,8 @@ export const YIZAI_ANIMATION_CONFIG = {
     ],
   },
   skill: {
-    key: "yizai_hero_skill_sheet",
+    key: "yizai_hero_skill_sheet_pro",
+    fallbackSheetKey: "yizai_hero_skill_sheet",
     fallbackKey: "yizai_hero_skill",
     frameWidth: 512,
     frameHeight: 512,
@@ -78,7 +81,8 @@ export const YIZAI_ANIMATION_CONFIG = {
     ],
   },
   ultimate: {
-    key: "yizai_hero_ultimate_sheet",
+    key: "yizai_hero_ultimate_sheet_pro",
+    fallbackSheetKey: "yizai_hero_ultimate_sheet",
     fallbackKey: "yizai_hero_ultimate",
     frameWidth: 512,
     frameHeight: 512,
@@ -109,7 +113,8 @@ export const YIZAI_ANIMATION_CONFIG = {
     ],
   },
   hurt: {
-    key: "yizai_hero_hurt_sheet",
+    key: "yizai_hero_hurt_sheet_pro",
+    fallbackSheetKey: "yizai_hero_hurt_sheet",
     fallbackKey: "yizai_hero_hurt",
     frameWidth: 512,
     frameHeight: 512,
@@ -124,7 +129,8 @@ export const YIZAI_ANIMATION_CONFIG = {
 
 export const ENEMY_ANIMATION_CONFIG = {
   idle: {
-    key: "monster_slime_idle_sheet",
+    key: "monster_slime_idle_sheet_pro",
+    fallbackSheetKey: "monster_slime_idle_sheet",
     fallbackKey: "monster_slime_idle",
     frameWidth: 512,
     frameHeight: 512,
@@ -134,7 +140,8 @@ export const ENEMY_ANIMATION_CONFIG = {
     priority: 0,
   },
   hit: {
-    key: "monster_slime_hit_sheet",
+    key: "monster_slime_hit_sheet_pro",
+    fallbackSheetKey: "monster_slime_hit_sheet",
     fallbackKey: "monster_slime_hit",
     frameWidth: 512,
     frameHeight: 512,
@@ -145,7 +152,8 @@ export const ENEMY_ANIMATION_CONFIG = {
     priority: 10,
   },
   attack: {
-    key: "monster_slime_attack_sheet",
+    key: "monster_slime_attack_sheet_pro",
+    fallbackSheetKey: "monster_slime_attack_sheet",
     fallbackKey: "monster_slime_attack",
     frameWidth: 512,
     frameHeight: 512,
@@ -164,7 +172,8 @@ export const ENEMY_ANIMATION_CONFIG = {
     ],
   },
   defeat: {
-    key: "monster_slime_defeat_sheet",
+    key: "monster_slime_defeat_sheet_pro",
+    fallbackSheetKey: "monster_slime_defeat_sheet",
     fallbackKey: "monster_slime_defeat",
     frameWidth: 512,
     frameHeight: 512,

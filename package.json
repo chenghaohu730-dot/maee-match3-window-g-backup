@@ -6,10 +6,14 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "test": "node --test --experimental-transform-types tests/*.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:sheets": "tsx tools/buildSpriteSheets.ts",
+    "validate:sheets": "tsx tools/validateSpriteSheets.ts"
   },
   "devDependencies": {
     "@types/node": "^24.0.1",
+    "sharp": "^0.34.5",
+    "tsx": "^4.20.6",
     "typescript": "^5.8.3",
     "vite": "^8.0.16"
   }

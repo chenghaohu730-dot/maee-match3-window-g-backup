@@ -20,6 +20,9 @@ export interface SkinResource {
   fallbackKind: FallbackKind;
   fallbackClass: string;
   fallbackLabel: string;
+  productionTier: "pro" | "standard" | "legacy-ai";
+  legacyAiSheet: boolean;
+  deprecated: boolean;
 }
 
 export interface SkinSceneClasses {
