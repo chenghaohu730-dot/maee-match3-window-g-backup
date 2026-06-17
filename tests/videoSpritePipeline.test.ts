@@ -4,7 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import sharp from "sharp";
-import { buildPlacementPlan, readAlphaBBox } from "../tools/video/alignFrames.ts";
+import {
+  alignActionFrames,
+  buildPlacementPlan,
+  readAlphaBBox,
+} from "../tools/video/alignFrames.ts";
 import { buildVideoSpriteSheet } from "../tools/video/buildVideoSpriteSheets.ts";
 import { applyChromaKey } from "../tools/video/chromaKeyCutout.ts";
 import { validateVideoSpriteSheet } from "../tools/video/validateVideoSpriteSheets.ts";
@@ -57,6 +61,18 @@ test("video sprite config produces effect-priority sheet dimensions", () => {
       hurt: { width: 3072, height: 1024 },
     },
   );
+});
+
+test("video sprite config enables fixed subject scaling for pro yizai sheets", () => {
+  for (const config of Object.values(videoSpriteActionConfigs)) {
+    assert.equal(config.alignment.subjectScale?.fixedSubjectHeight, 300);
+    assert.deepEqual(config.alignment.subjectScale?.subjectBounds, {
+      left: 0.28,
+      top: 0.18,
+      right: 0.66,
+      bottom: 0.98,
+    });
+  }
 });
 
 test("video sprite config validates manual sample ranges", () => {
@@ -148,7 +164,7 @@ test("buildPlacementPlan keeps aligned frames inside the target canvas", () => {
     {
       canvasWidth: 512,
       canvasHeight: 512,
-      baselineY: 470,
+      baselineY: 493,
       padding: 32,
       xOffset: -24,
       allowRightEffectSpace: true,
@@ -158,6 +174,112 @@ test("buildPlacementPlan keeps aligned frames inside the target canvas", () => {
   assert.equal(plan.top + plan.scaledHeight <= 512, true);
   assert.equal(plan.left >= 0, true);
   assert.equal(plan.left + plan.scaledWidth <= 512, true);
+});
+
+test("buildPlacementPlan scales from subject bounds instead of oversized effects", () => {
+  const effectBBox = {
+    minX: 0,
+    minY: 0,
+    maxX: 999,
+    maxY: 799,
+    width: 1000,
+    height: 800,
+  };
+  const subjectBBox = {
+    minX: 450,
+    minY: 300,
+    maxX: 549,
+    maxY: 699,
+    width: 100,
+    height: 400,
+  };
+  const plan = buildPlacementPlan(
+    effectBBox,
+    {
+      canvasWidth: 512,
+      canvasHeight: 512,
+      baselineY: 493,
+      padding: 0,
+      xOffset: 0,
+      allowRightEffectSpace: false,
+      subjectScale: {
+        fixedSubjectHeight: 300,
+        subjectBounds: { left: 0.3, top: 0.2, right: 0.7, bottom: 0.95 },
+        protectedBounds: { left: 0.3, top: 0.2, right: 0.7, bottom: 0.95 },
+        protectedPadding: 0,
+      },
+    },
+    subjectBBox,
+    subjectBBox,
+  );
+
+  assert.equal(plan.scaledWidth, 512);
+  assert.equal(plan.scaledHeight, 512);
+  assert.equal(plan.cropWidth < effectBBox.width, true);
+  assert.equal(Math.abs(subjectBBox.height * plan.scale - 300) < 1, true);
+  assert.equal(
+    Math.abs((subjectBBox.maxY + 1 - plan.cropTop) * plan.scale - 493) < 1,
+    true,
+  );
+});
+
+test("alignActionFrames crops oversized source frames before compositing", async () => {
+  await withTempRoot(async (root) => {
+    const cutoutDir = join(root, "cutout");
+    const renderDir = join(root, "render");
+    await mkdir(cutoutDir, { recursive: true });
+
+    await sharp({
+      create: {
+        width: 16,
+        height: 16,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    })
+      .composite([
+        {
+          input: {
+            create: {
+              width: 2,
+              height: 2,
+              channels: 4,
+              background: { r: 255, g: 255, b: 255, alpha: 1 },
+            },
+          },
+          left: 7,
+          top: 10,
+        },
+      ])
+      .png()
+      .toFile(join(cutoutDir, "frame_0001.png"));
+
+    const action = testAction({
+      cutoutDir,
+      renderDir,
+      debugDir: join(root, "debug"),
+      frameWidth: 8,
+      frameHeight: 8,
+      frameCount: 1,
+      columns: 1,
+      rows: 1,
+      alignment: {
+        canvasWidth: 8,
+        canvasHeight: 8,
+        baselineY: 7,
+        padding: 1,
+        xOffset: 0,
+        allowRightEffectSpace: false,
+      },
+    });
+
+    const result = await alignActionFrames(action, root);
+    const metadata = await sharp(join(renderDir, "frame_0001.png")).metadata();
+
+    assert.equal(result.frameCount, 1);
+    assert.equal(metadata.width, 8);
+    assert.equal(metadata.height, 8);
+  });
 });
 
 test("video sprite sheet build and validate use action-specific grid settings", async () => {

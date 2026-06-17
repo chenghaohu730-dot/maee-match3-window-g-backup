@@ -142,6 +142,7 @@ const FORMAL_READY_KEYS = [
   ...FORMAL_BOARD_KEYS,
   ...FORMAL_BACKGROUND_KEYS,
   ...FORMAL_YIZAI_HERO_KEYS,
+  ...PRO_YIZAI_SHEET_KEYS,
   ...LEGACY_YIZAI_SHEET_KEYS,
   ...FORMAL_MONSTER_SLIME_KEYS,
 ] as const satisfies readonly AssetKey[];
@@ -252,9 +253,9 @@ test("pro yizai keys exist and legacy yizai sheets remain fallback-ready", () =>
   for (const key of PRO_YIZAI_SHEET_KEYS) {
     const resource = fairySkin.resources[key];
 
-    assert.equal(resource.available, false);
+    assert.equal(resource.available, true);
     assert.equal(resource.productionTier, "pro");
-    assert.equal(hasImageResource(resource), false);
+    assert.equal(hasImageResource(resource), true);
   }
 
   for (const key of LEGACY_YIZAI_SHEET_KEYS) {
@@ -276,7 +277,9 @@ test("pro yizai keys exist and legacy yizai sheets remain fallback-ready", () =>
   });
 
   assert.equal(
-    html.includes("url('/assets/fairy/yizai/yizai_hero_idle_sheet.png')"),
+    html.includes(
+      "url('/assets/fairy/yizai/pro/yizai_hero_idle_sheet.png')",
+    ),
     true,
   );
   assert.equal(
@@ -295,8 +298,12 @@ test("pro yizai keys exist and legacy yizai sheets remain fallback-ready", () =>
 
 test("legacy yizai attack fallback path remains available when pro is absent", () => {
   const resource = fairySkin.resources.yizai_hero_attack_sheet;
+  const proUnavailableSkin = withUnavailableResources(
+    fairySkin,
+    PRO_YIZAI_SHEET_KEYS,
+  );
   const html = renderGameplayScene({
-    ...createGameplayModel(fairySkin),
+    ...createGameplayModel(proUnavailableSkin),
     characterAnimations: {
       yizai: "attack",
       enemy: "idle",
@@ -327,15 +334,19 @@ test("legacy yizai attack fallback path remains available when pro is absent", (
 });
 
 test("legacy yizai skill and ultimate fallback paths remain when pro is absent", () => {
+  const proUnavailableSkin = withUnavailableResources(
+    fairySkin,
+    PRO_YIZAI_SHEET_KEYS,
+  );
   const skillHtml = renderGameplayScene({
-    ...createGameplayModel(fairySkin),
+    ...createGameplayModel(proUnavailableSkin),
     characterAnimations: {
       yizai: "skill",
       enemy: "idle",
     },
   });
   const ultimateHtml = renderGameplayScene({
-    ...createGameplayModel(fairySkin),
+    ...createGameplayModel(proUnavailableSkin),
     characterAnimations: {
       yizai: "ultimate",
       enemy: "idle",
@@ -468,7 +479,9 @@ test("available first-batch fairy MVP images render asset URLs", () => {
     true,
   );
   assert.equal(
-    html.includes("url('/assets/fairy/yizai/yizai_hero_idle_sheet.png')"),
+    html.includes(
+      "url('/assets/fairy/yizai/pro/yizai_hero_idle_sheet.png')",
+    ),
     true,
   );
   assert.equal(
@@ -491,6 +504,25 @@ function withAvailableResources(
     resources[key] = {
       ...resources[key],
       available: true,
+    };
+  }
+
+  return {
+    ...skin,
+    resources,
+  };
+}
+
+function withUnavailableResources(
+  skin: Match3Skin,
+  keys: readonly AssetKey[],
+): Match3Skin {
+  const resources: Record<AssetKey, SkinResource> = { ...skin.resources };
+
+  for (const key of keys) {
+    resources[key] = {
+      ...resources[key],
+      available: false,
     };
   }
 

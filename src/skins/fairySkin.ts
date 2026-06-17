@@ -129,35 +129,35 @@ const fairyOverrides: Partial<
     fallbackLabel: "亿仔受击",
   },
   yizai_hero_idle_sheet_pro: {
-    available: false,
+    available: true,
     productionTier: "pro",
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-idle-sheet-pro",
     fallbackLabel: "亿仔待机生产版序列帧",
   },
   yizai_hero_attack_sheet_pro: {
-    available: false,
+    available: true,
     productionTier: "pro",
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-attack-sheet-pro",
     fallbackLabel: "亿仔攻击生产版序列帧",
   },
   yizai_hero_skill_sheet_pro: {
-    available: false,
+    available: true,
     productionTier: "pro",
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-skill-sheet-pro",
     fallbackLabel: "亿仔技能生产版序列帧",
   },
   yizai_hero_ultimate_sheet_pro: {
-    available: false,
+    available: true,
     productionTier: "pro",
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-ultimate-sheet-pro",
     fallbackLabel: "亿仔大招生产版序列帧",
   },
   yizai_hero_hurt_sheet_pro: {
-    available: false,
+    available: true,
     productionTier: "pro",
     fallbackClass:
       "asset-fallback fallback-fairy fallback-hero yizai-hero-hurt-sheet-pro",

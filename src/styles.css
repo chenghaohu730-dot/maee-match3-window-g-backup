@@ -432,6 +432,8 @@ p {
 
 .player-slot {
   justify-items: start;
+  transform: translateX(-21px) scale(1.6);
+  transform-origin: left bottom;
 }
 
 .enemy-slot {
@@ -1181,10 +1183,31 @@ p {
   background: #f8fafc;
 }
 
+.animation-calibration-preview-grid {
+  width: min(100%, 960px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+.animation-calibration-preview {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.animation-calibration-preview > span {
+  font-size: 12px;
+  font-weight: 900;
+  color: #475569;
+}
+
 .animation-calibration-frame {
   position: relative;
-  width: min(58vw, 420px);
-  height: min(58vw, 420px);
+  width: min(38vw, 420px);
+  height: min(38vw, 420px);
 }
 
 .animation-calibration-grid {
@@ -1212,6 +1235,15 @@ p {
   width: 100%;
   height: 100%;
   border-color: transparent;
+  background-color: transparent;
+}
+
+.animation-calibration-static-sprite {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  width: 100%;
+  height: 100%;
   background-color: transparent;
 }
 
@@ -2961,6 +2993,10 @@ p {
   }
 
   .animation-calibration-main {
+    grid-template-columns: 1fr;
+  }
+
+  .animation-calibration-preview-grid {
     grid-template-columns: 1fr;
   }
 

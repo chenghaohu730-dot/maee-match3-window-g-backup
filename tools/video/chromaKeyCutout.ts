@@ -148,7 +148,7 @@ export function applyChromaKey(
       const greenExcess = Math.max(0, g - strongestNonGreen);
       const edgeInfluence = 1 - Math.min(distance / opaqueDistance, 1);
       data[offset + 1] = clampByte(
-        Math.round(g - greenExcess * (0.65 + edgeInfluence * 0.35)),
+        Math.round(g - greenExcess * (0.9 + edgeInfluence * 0.1)),
       );
     }
 

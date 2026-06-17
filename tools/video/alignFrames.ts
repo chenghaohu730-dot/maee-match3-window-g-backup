@@ -8,6 +8,8 @@ import {
   selectVideoSpriteActions,
   validateVideoSpriteActionShape,
   type FrameAlignmentSettings,
+  type FrameSubjectBoundsSettings,
+  type FrameSubjectScaleSettings,
   type VideoSpriteActionConfig,
 } from "./videoToSpriteConfig.ts";
 
@@ -80,7 +82,9 @@ export async function alignActionFrames(
   await removePngFiles(outputDir);
 
   const framePaths = frameNames.map((frameName) => resolve(inputDir, frameName));
-  const frameBBoxes = await Promise.all(framePaths.map(readAlphaBBox));
+  const frameBBoxes = await Promise.all(
+    framePaths.map((framePath) => readAlphaBBox(framePath)),
+  );
   const presentBBoxes = frameBBoxes.filter((bbox): bbox is AlphaBBox => bbox !== null);
 
   if (presentBBoxes.length === 0) {
@@ -88,7 +92,49 @@ export async function alignActionFrames(
   }
 
   const unionBBox = unionAlphaBBoxes(presentBBoxes);
-  const plan = buildPlacementPlan(unionBBox, action.alignment);
+  const subjectScale = action.alignment.subjectScale;
+  const subjectFrameBBoxes = subjectScale
+    ? await Promise.all(
+        framePaths.map((framePath) =>
+          readAlphaBBox(
+            framePath,
+            subjectScale.alphaThreshold ?? 8,
+            subjectScale.subjectBounds,
+          ),
+        ),
+      )
+    : frameBBoxes;
+  const protectedFrameBBoxes = subjectScale
+    ? await Promise.all(
+        framePaths.map((framePath) =>
+          readAlphaBBox(
+            framePath,
+            subjectScale.alphaThreshold ?? 8,
+            subjectScale.protectedBounds,
+          ),
+        ),
+      )
+    : subjectFrameBBoxes;
+  const presentSubjectBBoxes = subjectFrameBBoxes.filter(
+    (bbox): bbox is AlphaBBox => bbox !== null,
+  );
+  const presentProtectedBBoxes = protectedFrameBBoxes.filter(
+    (bbox): bbox is AlphaBBox => bbox !== null,
+  );
+  const subjectBBox =
+    presentSubjectBBoxes.length > 0
+      ? unionAlphaBBoxes(presentSubjectBBoxes)
+      : unionBBox;
+  const protectedBBox =
+    presentProtectedBBoxes.length > 0
+      ? unionAlphaBBoxes(presentProtectedBBoxes)
+      : subjectBBox;
+  const plan = buildPlacementPlan(
+    unionBBox,
+    action.alignment,
+    subjectBBox,
+    protectedBBox,
+  );
 
   for (let index = 0; index < framePaths.length; index++) {
     await writeAlignedFrame(
@@ -106,10 +152,14 @@ export async function alignActionFrames(
         action: action.action,
         alignment: action.alignment,
         unionBBox,
+        subjectBBox,
+        protectedBBox,
         placement: plan,
         frames: frameNames.map((frameName, index) => ({
           frame: frameName,
           bbox: frameBBoxes[index],
+          subjectBBox: subjectFrameBBoxes[index],
+          protectedBBox: protectedFrameBBoxes[index],
         })),
       },
       null,
@@ -129,6 +179,7 @@ export async function alignActionFrames(
 export async function readAlphaBBox(
   inputPath: string,
   alphaThreshold = 8,
+  bounds?: FrameSubjectBoundsSettings,
 ): Promise<AlphaBBox | null> {
   const { data, info } = await sharp(inputPath)
     .ensureAlpha()
@@ -143,9 +194,10 @@ export async function readAlphaBBox(
   let minY = info.height;
   let maxX = -1;
   let maxY = -1;
+  const scanBounds = resolveScanBounds(bounds, info.width, info.height);
 
-  for (let y = 0; y < info.height; y++) {
-    for (let x = 0; x < info.width; x++) {
+  for (let y = scanBounds.minY; y <= scanBounds.maxY; y++) {
+    for (let x = scanBounds.minX; x <= scanBounds.maxX; x++) {
       const alpha = data[(y * info.width + x) * 4 + 3] ?? 0;
 
       if (alpha <= alphaThreshold) {
@@ -174,13 +226,25 @@ export async function readAlphaBBox(
 }
 
 export function buildPlacementPlan(
-  unionBBox: AlphaBBox,
+  effectBBox: AlphaBBox,
   alignment: FrameAlignmentSettings,
+  subjectBBox: AlphaBBox = effectBBox,
+  protectedBBox: AlphaBBox = subjectBBox,
 ): PlacementPlan {
-  const cropLeft = unionBBox.minX - alignment.padding;
-  const cropTop = unionBBox.minY - alignment.padding;
-  const cropWidth = unionBBox.width + alignment.padding * 2;
-  const cropHeight = unionBBox.height + alignment.padding * 2;
+  if (alignment.subjectScale) {
+    return buildFixedSubjectPlacementPlan(
+      effectBBox,
+      subjectBBox,
+      protectedBBox,
+      alignment,
+      alignment.subjectScale,
+    );
+  }
+
+  const cropLeft = effectBBox.minX - alignment.padding;
+  const cropTop = effectBBox.minY - alignment.padding;
+  const cropWidth = effectBBox.width + alignment.padding * 2;
+  const cropHeight = effectBBox.height + alignment.padding * 2;
   const maxWidth = alignment.allowRightEffectSpace
     ? alignment.canvasWidth - alignment.padding
     : alignment.canvasWidth - alignment.padding * 2;
@@ -211,27 +275,83 @@ export function buildPlacementPlan(
   };
 }
 
+function buildFixedSubjectPlacementPlan(
+  _effectBBox: AlphaBBox,
+  subjectBBox: AlphaBBox,
+  protectedBBox: AlphaBBox,
+  alignment: FrameAlignmentSettings,
+  subjectScale: FrameSubjectScaleSettings,
+): PlacementPlan {
+  const desiredScale = subjectScale.fixedSubjectHeight / subjectBBox.height;
+  const cropWidth = Math.max(1, Math.round(alignment.canvasWidth / desiredScale));
+  const cropHeight = Math.max(1, Math.round(alignment.canvasHeight / desiredScale));
+  const scaleX = alignment.canvasWidth / cropWidth;
+  const scaleY = alignment.canvasHeight / cropHeight;
+  const subjectCenterX = (subjectBBox.minX + subjectBBox.maxX + 1) / 2;
+  const subjectBottomY = subjectBBox.maxY + 1;
+  const targetCenterX = alignment.canvasWidth / 2 + alignment.xOffset;
+  const protectedPaddingX = subjectScale.protectedPadding / scaleX;
+
+  let cropLeft = Math.round(subjectCenterX - targetCenterX / scaleX);
+  cropLeft = alignCropStartToInclude(
+    cropLeft,
+    cropWidth,
+    protectedBBox.minX,
+    protectedBBox.maxX + 1,
+    protectedPaddingX,
+  );
+
+  const cropTop = Math.round(subjectBottomY - alignment.baselineY / scaleY);
+
+  return {
+    cropLeft,
+    cropTop,
+    cropWidth,
+    cropHeight,
+    scale: scaleY,
+    scaledWidth: alignment.canvasWidth,
+    scaledHeight: alignment.canvasHeight,
+    left: 0,
+    top: 0,
+  };
+}
+
+function alignCropStartToInclude(
+  cropStart: number,
+  cropSize: number,
+  protectedMin: number,
+  protectedMax: number,
+  padding: number,
+): number {
+  const desiredMin = protectedMin - padding;
+  const desiredMax = protectedMax + padding;
+
+  if (desiredMax - desiredMin > cropSize) {
+    return Math.round((desiredMin + desiredMax - cropSize) / 2);
+  }
+
+  let nextCropStart = cropStart;
+
+  if (nextCropStart > desiredMin) {
+    nextCropStart = desiredMin;
+  }
+
+  if (nextCropStart + cropSize < desiredMax) {
+    nextCropStart = desiredMax - cropSize;
+  }
+
+  return Math.round(nextCropStart);
+}
+
 async function writeAlignedFrame(
   inputPath: string,
   outputPath: string,
   plan: PlacementPlan,
   alignment: FrameAlignmentSettings,
 ): Promise<void> {
-  const cropped = await sharp({
-    create: {
-      width: plan.cropWidth,
-      height: plan.cropHeight,
-      channels: 4,
-      background: { r: 0, g: 0, b: 0, alpha: 0 },
-    },
-  })
-    .composite([
-      {
-        input: inputPath,
-        left: -plan.cropLeft,
-        top: -plan.cropTop,
-      },
-    ])
+  const cropped = await createCropBuffer(inputPath, plan);
+
+  const scaled = await sharp(cropped)
     .resize(plan.scaledWidth, plan.scaledHeight, {
       fit: "fill",
       kernel: "lanczos3",
@@ -247,9 +367,62 @@ async function writeAlignedFrame(
       background: { r: 0, g: 0, b: 0, alpha: 0 },
     },
   })
-    .composite([{ input: cropped, left: plan.left, top: plan.top }])
+    .composite([{ input: scaled, left: plan.left, top: plan.top }])
     .png({ compressionLevel: 9, adaptiveFiltering: true, force: true })
     .toFile(outputPath);
+}
+
+async function createCropBuffer(
+  inputPath: string,
+  plan: PlacementPlan,
+): Promise<Buffer> {
+  const metadata = await sharp(inputPath).metadata();
+  const sourceWidth = metadata.width ?? 0;
+  const sourceHeight = metadata.height ?? 0;
+
+  if (sourceWidth <= 0 || sourceHeight <= 0) {
+    throw new Error(`${inputPath}: image dimensions are unavailable`);
+  }
+
+  const sourceLeft = clamp(plan.cropLeft, 0, sourceWidth);
+  const sourceTop = clamp(plan.cropTop, 0, sourceHeight);
+  const sourceRight = clamp(plan.cropLeft + plan.cropWidth, 0, sourceWidth);
+  const sourceBottom = clamp(plan.cropTop + plan.cropHeight, 0, sourceHeight);
+  const sourceCropWidth = sourceRight - sourceLeft;
+  const sourceCropHeight = sourceBottom - sourceTop;
+  const cropBase = sharp({
+    create: {
+      width: plan.cropWidth,
+      height: plan.cropHeight,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  });
+
+  if (sourceCropWidth <= 0 || sourceCropHeight <= 0) {
+    return cropBase.png().toBuffer();
+  }
+
+  const sourceCrop = await sharp(inputPath)
+    .extract({
+      left: sourceLeft,
+      top: sourceTop,
+      width: sourceCropWidth,
+      height: sourceCropHeight,
+    })
+    .png()
+    .toBuffer();
+
+  return cropBase
+    .composite([
+      {
+        input: sourceCrop,
+        left: sourceLeft - plan.cropLeft,
+        top: sourceTop - plan.cropTop,
+      },
+    ])
+    .png({ compressionLevel: 9, adaptiveFiltering: true, force: true })
+    .toBuffer();
 }
 
 function unionAlphaBBoxes(bboxes: readonly AlphaBBox[]): AlphaBBox {
@@ -265,6 +438,28 @@ function unionAlphaBBoxes(bboxes: readonly AlphaBBox[]): AlphaBBox {
     maxY,
     width: maxX - minX + 1,
     height: maxY - minY + 1,
+  };
+}
+
+function resolveScanBounds(
+  bounds: FrameSubjectBoundsSettings | undefined,
+  width: number,
+  height: number,
+): { minX: number; minY: number; maxX: number; maxY: number } {
+  if (!bounds) {
+    return {
+      minX: 0,
+      minY: 0,
+      maxX: width - 1,
+      maxY: height - 1,
+    };
+  }
+
+  return {
+    minX: clamp(Math.floor(bounds.left * width), 0, width - 1),
+    minY: clamp(Math.floor(bounds.top * height), 0, height - 1),
+    maxX: clamp(Math.ceil(bounds.right * width) - 1, 0, width - 1),
+    maxY: clamp(Math.ceil(bounds.bottom * height) - 1, 0, height - 1),
   };
 }
 

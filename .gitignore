@@ -4,3 +4,10 @@ dist/
 .playwright-cli/
 artifacts/
 __pycache__/
+assets-src/yizai_video/debug/**
+assets-src/yizai_video/extracted/**
+assets-src/yizai_video/renders/**
+!assets-src/yizai_video/debug/.gitkeep
+!assets-src/yizai_video/extracted/.gitkeep
+!assets-src/yizai_video/renders/.gitkeep
+!assets-src/yizai_video/renders/*/.gitkeep

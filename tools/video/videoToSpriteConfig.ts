@@ -25,6 +25,22 @@ export interface FrameAlignmentSettings {
   padding: number;
   xOffset: number;
   allowRightEffectSpace: boolean;
+  subjectScale?: FrameSubjectScaleSettings;
+}
+
+export interface FrameSubjectBoundsSettings {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export interface FrameSubjectScaleSettings {
+  fixedSubjectHeight: number;
+  subjectBounds: FrameSubjectBoundsSettings;
+  protectedBounds: FrameSubjectBoundsSettings;
+  protectedPadding: number;
+  alphaThreshold?: number;
 }
 
 export interface VideoSpriteActionConfig {
@@ -55,22 +71,40 @@ export interface VideoSpriteActionConfig {
 const FRAME_WIDTH = 512;
 const FRAME_HEIGHT = 512;
 const BASE_DIR = "assets-src/yizai_video";
+const YIZAI_VIDEO_SAMPLE_START_TIME = 0;
+const YIZAI_VIDEO_SAMPLE_END_TIME = 4;
 
 const DEFAULT_CHROMA_KEY: ChromaKeySettings = {
   keyColor: "#00ff00",
-  tolerance: 70,
-  edgeFeather: 1.5,
+  tolerance: 90,
+  edgeFeather: 0.8,
   despill: true,
 };
 
 const DEFAULT_ALIGNMENT: FrameAlignmentSettings = {
   canvasWidth: FRAME_WIDTH,
   canvasHeight: FRAME_HEIGHT,
-  baselineY: 470,
+  baselineY: 493,
   padding: 32,
   xOffset: 0,
   allowRightEffectSpace: false,
 };
+
+const DEFAULT_SUBJECT_BOUNDS: FrameSubjectBoundsSettings = {
+  left: 0.28,
+  top: 0.18,
+  right: 0.66,
+  bottom: 0.98,
+};
+
+const FULL_FRAME_BOUNDS: FrameSubjectBoundsSettings = {
+  left: 0,
+  top: 0,
+  right: 1,
+  bottom: 1,
+};
+
+const FIXED_SUBJECT_HEIGHT = 300;
 
 function defineAction(
   action: VideoSpriteAction,
@@ -80,11 +114,12 @@ function defineAction(
   rows: number,
   loop: boolean,
   options: Partial<
-    Pick<
-      VideoSpriteActionConfig,
-      "alignment" | "chromaKey" | "maxBytes" | "sampleStartTime" | "sampleEndTime"
-    >
+    Pick<VideoSpriteActionConfig, "maxBytes" | "sampleStartTime" | "sampleEndTime">
   > = {},
+  visualOptions: {
+    alignment?: Partial<FrameAlignmentSettings>;
+    chromaKey?: Partial<ChromaKeySettings>;
+  } = {},
 ): VideoSpriteActionConfig {
   return {
     action,
@@ -112,36 +147,125 @@ function defineAction(
       : {}),
     chromaKey: {
       ...DEFAULT_CHROMA_KEY,
-      ...options.chromaKey,
+      ...visualOptions.chromaKey,
     },
-    alignment: {
-      ...DEFAULT_ALIGNMENT,
-      ...options.alignment,
-    },
+    alignment: mergeAlignment(visualOptions.alignment),
     maxBytes: options.maxBytes ?? 32 * 1024 * 1024,
   };
 }
 
+function mergeAlignment(
+  alignment: Partial<FrameAlignmentSettings> | undefined,
+): FrameAlignmentSettings {
+  const subjectScale = alignment?.subjectScale;
+
+  return {
+    ...DEFAULT_ALIGNMENT,
+    ...alignment,
+    ...(subjectScale
+      ? {
+          subjectScale: {
+            ...subjectScale,
+            subjectBounds: {
+              ...subjectScale.subjectBounds,
+            },
+            protectedBounds: {
+              ...subjectScale.protectedBounds,
+            },
+          },
+        }
+      : {}),
+  };
+}
+
+function fixedSubjectScale(
+  protectedBounds: FrameSubjectBoundsSettings = FULL_FRAME_BOUNDS,
+): FrameSubjectScaleSettings {
+  return {
+    fixedSubjectHeight: FIXED_SUBJECT_HEIGHT,
+    subjectBounds: DEFAULT_SUBJECT_BOUNDS,
+    protectedBounds,
+    protectedPadding: 0,
+    alphaThreshold: 8,
+  };
+}
+
 export const videoSpriteActionConfigs = {
-  idle: defineAction("idle", 12, 12, 6, 2, true, {
-    maxBytes: 36 * 1024 * 1024,
-  }),
-  attack: defineAction("attack", 16, 20, 8, 2, false, {
-    alignment: {
-      ...DEFAULT_ALIGNMENT,
-      xOffset: -24,
-      allowRightEffectSpace: true,
+  idle: defineAction(
+    "idle",
+    12,
+    12,
+    6,
+    2,
+    true,
+    {
+      sampleStartTime: YIZAI_VIDEO_SAMPLE_START_TIME,
+      sampleEndTime: YIZAI_VIDEO_SAMPLE_END_TIME,
+      maxBytes: 36 * 1024 * 1024,
     },
+    {
+      alignment: {
+        subjectScale: fixedSubjectScale(),
+      },
+    },
+  ),
+  attack: defineAction("attack", 16, 20, 8, 2, false, {
+    sampleStartTime: YIZAI_VIDEO_SAMPLE_START_TIME,
+    sampleEndTime: YIZAI_VIDEO_SAMPLE_END_TIME,
     maxBytes: 48 * 1024 * 1024,
+  }, {
+    alignment: {
+      xOffset: -12,
+      allowRightEffectSpace: true,
+      subjectScale: fixedSubjectScale({
+        left: 0.113,
+        top: 0.04,
+        right: 0.861,
+        bottom: 0.98,
+      }),
+    },
   }),
   skill: defineAction("skill", 24, 20, 8, 3, false, {
+    sampleStartTime: YIZAI_VIDEO_SAMPLE_START_TIME,
+    sampleEndTime: YIZAI_VIDEO_SAMPLE_END_TIME,
     maxBytes: 72 * 1024 * 1024,
+  }, {
+    alignment: {
+      xOffset: -8,
+      baselineY: 503,
+      subjectScale: fixedSubjectScale({
+        left: 0.2,
+        top: 0.04,
+        right: 0.84,
+        bottom: 0.98,
+      }),
+    },
   }),
   ultimate: defineAction("ultimate", 32, 24, 8, 4, false, {
+    sampleStartTime: YIZAI_VIDEO_SAMPLE_START_TIME,
+    sampleEndTime: YIZAI_VIDEO_SAMPLE_END_TIME,
     maxBytes: 96 * 1024 * 1024,
+  }, {
+    alignment: {
+      xOffset: -6,
+      baselineY: 505,
+      subjectScale: fixedSubjectScale({
+        left: 0.17,
+        top: 0,
+        right: 0.82,
+        bottom: 0.98,
+      }),
+    },
   }),
   hurt: defineAction("hurt", 12, 20, 6, 2, false, {
+    sampleStartTime: YIZAI_VIDEO_SAMPLE_START_TIME,
+    sampleEndTime: YIZAI_VIDEO_SAMPLE_END_TIME,
     maxBytes: 36 * 1024 * 1024,
+  }, {
+    alignment: {
+      xOffset: -20,
+      subjectScale: fixedSubjectScale(),
+    },
   }),
 } as const satisfies Record<VideoSpriteAction, VideoSpriteActionConfig>;
 
@@ -252,5 +376,68 @@ export function validateVideoSpriteActionShape(
     throw new Error(
       `${config.action}: baselineY ${config.alignment.baselineY} exceeds canvas height ${config.alignment.canvasHeight}`,
     );
+  }
+
+  const subjectScale = config.alignment.subjectScale;
+
+  if (subjectScale) {
+    if (
+      !Number.isFinite(subjectScale.fixedSubjectHeight) ||
+      subjectScale.fixedSubjectHeight <= 0
+    ) {
+      throw new Error(
+        `${config.action}: fixedSubjectHeight must be a positive number`,
+      );
+    }
+
+    if (
+      !Number.isFinite(subjectScale.protectedPadding) ||
+      subjectScale.protectedPadding < 0
+    ) {
+      throw new Error(
+        `${config.action}: protectedPadding must be a non-negative number`,
+      );
+    }
+
+    if (
+      subjectScale.alphaThreshold !== undefined &&
+      (!Number.isFinite(subjectScale.alphaThreshold) ||
+        subjectScale.alphaThreshold < 0)
+    ) {
+      throw new Error(
+        `${config.action}: alphaThreshold must be a non-negative number`,
+      );
+    }
+
+    validateFrameBounds(
+      config.action,
+      "subjectBounds",
+      subjectScale.subjectBounds,
+    );
+    validateFrameBounds(
+      config.action,
+      "protectedBounds",
+      subjectScale.protectedBounds,
+    );
+  }
+}
+
+function validateFrameBounds(
+  action: string,
+  field: string,
+  bounds: FrameSubjectBoundsSettings,
+): void {
+  for (const [name, value] of Object.entries(bounds)) {
+    if (!Number.isFinite(value) || value < 0 || value > 1) {
+      throw new Error(`${action}: ${field}.${name} must be between 0 and 1`);
+    }
+  }
+
+  if (bounds.right <= bounds.left) {
+    throw new Error(`${action}: ${field}.right must be greater than left`);
+  }
+
+  if (bounds.bottom <= bounds.top) {
+    throw new Error(`${action}: ${field}.bottom must be greater than top`);
   }
 }
