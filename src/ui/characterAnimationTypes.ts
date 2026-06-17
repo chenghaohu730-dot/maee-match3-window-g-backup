@@ -70,6 +70,7 @@ export interface SpriteAnimationConfig<StateName extends string = string> {
   loop: boolean;
   returnTo?: StateName;
   priority: number;
+  staticOnly?: boolean;
   alignment?: CharacterAnimationAlignment;
   frameEvents?: readonly CharacterFrameEvent[];
   fallbackSheet?: SpriteAnimationFallbackSheetConfig;

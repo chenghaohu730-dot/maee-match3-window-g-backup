@@ -6,6 +6,7 @@ import type { Match3Skin, SkinResource } from "../src/skins/skinTypes.ts";
 import {
   getCharacterAnchor,
   getSpriteAnimationDurationMs,
+  ENEMY_ANIMATION_CONFIG,
   YIZAI_ATTACK_ALIGNMENT,
   YIZAI_ANCHORS,
   YIZAI_ANIMATION_CONFIG,
@@ -66,6 +67,22 @@ test("missing fallback image still resolves to a placeholder without throwing", 
   assert.equal(source.mode, "placeholder");
   assert.equal(source.key, "yizai_hero_attack");
   assert.equal(source.path, "");
+});
+
+test("static-only monster states skip sprite sheets and use static fallbacks", () => {
+  const skin = withAvailableResources(fairySkin, [
+    "monster_slime_idle_sheet_pro",
+    "monster_slime_idle",
+  ]);
+  const source = resolveCharacterAnimationSource(
+    ENEMY_ANIMATION_CONFIG.idle,
+    skin,
+  );
+
+  assert.equal(ENEMY_ANIMATION_CONFIG.idle.staticOnly, true);
+  assert.equal(source.mode, "fallbackImage");
+  assert.equal(source.key, "monster_slime_idle");
+  assert.equal(source.path, "/assets/fairy/monsters/monster_slime_idle.png");
 });
 
 test("available pro attack sprite sheet resolves before every fallback", () => {

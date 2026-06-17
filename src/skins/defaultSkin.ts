@@ -7,6 +7,7 @@ import type { PieceType } from "../core/board.ts";
 import type {
   FallbackKind,
   Match3Skin,
+  MonsterAssetState,
   SkinAnimation,
   SkinAnimationSet,
   SkinResource,
@@ -23,14 +24,60 @@ export const PIECE_ASSETS: Record<PieceType, AssetKey> = {
   5: "piece_orange_courage",
 };
 
-export const MONSTER_ASSETS: Record<string, AssetKey> = {
-  "forest-slime": "monster_slime_idle",
-  "pumpkin-fiend": "monster_pumpkin_idle",
-  "crow-fiend": "monster_crow_idle",
-  "thorn-treant": "monster_tree_idle",
-  "wolf-soldier": "monster_wolf_idle",
-  "young-black-dragon-king": "boss_dragon_idle",
+export const MONSTER_STATE_ASSETS: Record<
+  string,
+  Record<MonsterAssetState, AssetKey>
+> = {
+  forest_slime: {
+    idle: "monster_slime_idle",
+    hit: "monster_slime_hit",
+    attack: "monster_slime_attack",
+    defeat: "monster_slime_defeat",
+  },
+  pumpkin_imp: {
+    idle: "monster_pumpkin_idle",
+    hit: "monster_pumpkin_hit",
+    attack: "monster_pumpkin_attack",
+    defeat: "monster_pumpkin_defeat",
+  },
+  fairy_crow: {
+    idle: "monster_crow_idle",
+    hit: "monster_crow_hit",
+    attack: "monster_crow_attack",
+    defeat: "monster_crow_defeat",
+  },
+  tree_spirit: {
+    idle: "monster_tree_idle",
+    hit: "monster_tree_hit",
+    attack: "monster_tree_attack",
+    defeat: "monster_tree_defeat",
+  },
+  forest_wolf: {
+    idle: "monster_wolf_idle",
+    hit: "monster_wolf_hit",
+    attack: "monster_wolf_attack",
+    defeat: "monster_wolf_defeat",
+  },
+  fairy_dragon_boss: {
+    idle: "boss_dragon_idle",
+    hit: "boss_dragon_hit",
+    attack: "boss_dragon_attack",
+    defeat: "boss_dragon_defeat",
+  },
+  endless_demon_king: {
+    idle: "boss_demon_king_idle",
+    hit: "boss_demon_king_hit",
+    attack: "boss_demon_king_attack",
+    defeat: "boss_demon_king_defeat",
+  },
 };
+
+export const MONSTER_ASSETS: Record<string, AssetKey> = Object.fromEntries(
+  Object.entries(MONSTER_STATE_ASSETS).map(([monsterId, states]) => [
+    monsterId,
+    states.idle,
+  ]),
+) as Record<string, AssetKey>;
 
 export const VFX_ASSETS: Record<string, AssetKey> = {
   red_skill_slash: "vfx_red_skill_slash",
@@ -53,6 +100,7 @@ export const defaultSkin: Match3Skin = {
   resources: createSkinResources("default"),
   pieceAssets: PIECE_ASSETS,
   monsterAssets: MONSTER_ASSETS,
+  monsterStateAssets: MONSTER_STATE_ASSETS,
   vfxAssets: VFX_ASSETS,
   animations: createSkinAnimations("default"),
   sceneClasses: {
@@ -279,11 +327,30 @@ function fallbackLabelForKey(key: AssetKey): string {
     monster_slime_hit_sheet: "森林史莱姆受击序列帧",
     monster_slime_attack_sheet: "森林史莱姆攻击序列帧",
     monster_slime_defeat_sheet: "森林史莱姆退场序列帧",
-    monster_pumpkin_idle: "南瓜怪",
-    monster_crow_idle: "乌鸦怪",
-    monster_tree_idle: "荆棘树精",
-    monster_wolf_idle: "狼兵",
-    boss_dragon_idle: "黑龙幼王",
+    monster_pumpkin_idle: "南瓜小妖",
+    monster_pumpkin_hit: "南瓜小妖受击",
+    monster_pumpkin_attack: "南瓜小妖攻击",
+    monster_pumpkin_defeat: "南瓜小妖退场",
+    monster_crow_idle: "童话乌鸦",
+    monster_crow_hit: "童话乌鸦受击",
+    monster_crow_attack: "童话乌鸦攻击",
+    monster_crow_defeat: "童话乌鸦退场",
+    monster_tree_idle: "森林树精",
+    monster_tree_hit: "森林树精受击",
+    monster_tree_attack: "森林树精攻击",
+    monster_tree_defeat: "森林树精退场",
+    monster_wolf_idle: "森林狼",
+    monster_wolf_hit: "森林狼受击",
+    monster_wolf_attack: "森林狼攻击",
+    monster_wolf_defeat: "森林狼退场",
+    boss_dragon_idle: "童话龙王",
+    boss_dragon_hit: "童话龙王受击",
+    boss_dragon_attack: "童话龙王攻击",
+    boss_dragon_defeat: "童话龙王退场",
+    boss_demon_king_idle: "魔王",
+    boss_demon_king_hit: "魔王受击",
+    boss_demon_king_attack: "魔王攻击",
+    boss_demon_king_defeat: "魔王退场",
     ui_hp_bar_bg: "血条底",
     ui_hp_bar_player_fill: "玩家血条",
     ui_hp_bar_enemy_fill: "怪物血条",

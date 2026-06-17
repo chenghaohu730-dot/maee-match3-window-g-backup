@@ -195,7 +195,11 @@ function buildStateFallbackRequests(
     requests.push({ characterId: "yizai", state: "ultimate" });
   }
 
-  if (state.enemyHp <= 0 && (state.phase === "won" || state.phase === "playing")) {
+  if (
+    state.enemyInfiniteHp !== true &&
+    state.enemyHp <= 0 &&
+    (state.phase === "won" || state.phase === "playing")
+  ) {
     requests.push({ characterId: "enemy", state: "defeat" });
   }
 

@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { CombatSystem } from "../src/core/combat.ts";
 import type { CombatEvent, EnemyWave } from "../src/core/combatTypes.ts";
+import {
+  ENDLESS_CHALLENGE_WAVES,
+  ENDLESS_DEMON_KING_WAVE,
+  FAIRY_DRAGON_BOSS_WAVE,
+  FAIRY_TALE_WAVES,
+} from "../src/core/waves.ts";
 
 test("initializes the player and first wave", () => {
   const combat = new CombatSystem();
@@ -12,7 +18,7 @@ test("initializes the player and first wave", () => {
   assert.equal(state.player.shield, 0);
   assert.equal(state.wave, 1);
   assert.equal(state.status, "playing");
-  assert.equal(state.enemy?.id, "forest-slime");
+  assert.equal(state.enemy?.id, "forest_slime");
   assert.equal(state.enemy?.name, "森林史莱姆");
   assert.equal(state.enemy?.hp, 60);
   assert.equal(state.enemy?.attackInterval, 0);
@@ -154,7 +160,24 @@ test("applies armor break to increase enemy damage taken", () => {
   assert.equal(state.armorBreak, null);
 });
 
-test("starts endless challenge after the default boss is defeated", () => {
+test("fairy tale waves configure the required six monsters", () => {
+  assert.deepEqual(
+    FAIRY_TALE_WAVES.map((wave) => [wave.id, wave.name]),
+    [
+      ["forest_slime", "森林史莱姆"],
+      ["pumpkin_imp", "南瓜小妖"],
+      ["fairy_crow", "童话乌鸦"],
+      ["tree_spirit", "森林树精"],
+      ["forest_wolf", "森林狼"],
+      ["fairy_dragon_boss", "童话龙王"],
+    ],
+  );
+  assert.equal(FAIRY_TALE_WAVES.length, 6);
+  assert.equal(FAIRY_TALE_WAVES[5]?.id, "fairy_dragon_boss");
+  assert.equal(FAIRY_TALE_WAVES[5]?.name, "童话龙王");
+});
+
+test("defeating the sixth fairy dragon boss wins normal mode", () => {
   const combat = new CombatSystem();
 
   for (let index = 0; index < 5; index++) {
@@ -164,15 +187,57 @@ test("starts endless challenge after the default boss is defeated", () => {
   const events = combat.applyPlayerMoveResult({ totalCleared: 150 });
   const state = combat.getState();
 
+  assert.equal(state.status, "won");
+  assert.equal(state.wave, 6);
+  assert.equal(state.enemy?.id, "fairy_dragon_boss");
+  assert.equal(state.enemy?.name, "童话龙王");
+  assert.equal(hasEvent(events, "enemyDefeated"), true);
+  assert.equal(hasEvent(events, "gameWon"), true);
+});
+
+test("endless demon king reuses dragon attack values and never dies", () => {
+  const combat = new CombatSystem(ENDLESS_CHALLENGE_WAVES);
+  const initial = combat.getState();
+
+  assert.equal(initial.enemy?.id, "endless_demon_king");
+  assert.equal(initial.enemy?.name, "魔王");
+  assert.equal(initial.enemy?.damage, FAIRY_DRAGON_BOSS_WAVE.damage);
+  assert.equal(
+    initial.enemy?.attackInterval,
+    FAIRY_DRAGON_BOSS_WAVE.attackInterval,
+  );
+  assert.equal(initial.enemy?.infiniteHp, true);
+
+  const events = combat.applyPlayerMoveResult({ totalCleared: 999 });
+  const state = combat.getState();
+
+  assert.equal(ENDLESS_DEMON_KING_WAVE.infiniteHp, true);
   assert.equal(state.status, "playing");
-  assert.equal(state.wave, 7);
-  assert.equal(state.enemy?.id, "endless-challenge");
-  assert.equal(state.enemy?.name, "无尽挑战");
   assert.equal(state.enemy?.hp, Number.POSITIVE_INFINITY);
-  assert.equal(state.enemy?.attackInterval, 3);
-  assert.equal(state.enemy?.damage, 18);
-  assert.equal(hasEvent(events, "waveStarted"), true);
+  assert.equal(state.enemy?.maxHp, Number.POSITIVE_INFINITY);
+  assert.equal(state.totalDamageDealt, 1998);
+  assert.equal(hasEvent(events, "enemyDefeated"), false);
   assert.equal(hasEvent(events, "gameWon"), false);
+});
+
+test("endless demon king can attack and player death ends endless challenge", () => {
+  const combat = new CombatSystem([
+    {
+      ...ENDLESS_DEMON_KING_WAVE,
+      attackInterval: 1,
+      damage: 120,
+    },
+  ]);
+
+  const events = combat.applyPlayerMoveResult({ totalCleared: 3 });
+  const state = combat.getState();
+
+  assert.equal(hasEvent(events, "playerDamaged"), true);
+  assert.equal(hasEvent(events, "gameLost"), true);
+  assert.equal(state.status, "lost");
+  assert.equal(state.player.hp, 0);
+  assert.equal(state.enemy?.id, "endless_demon_king");
+  assert.equal(state.enemy?.hp, Number.POSITIVE_INFINITY);
 });
 
 test("sets status to won after the last finite wave is defeated", () => {

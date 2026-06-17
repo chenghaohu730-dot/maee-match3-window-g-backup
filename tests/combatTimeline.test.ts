@@ -101,7 +101,7 @@ test("ultimate timeline never exceeds the configured maximum", () => {
 test("enemyDefeated prevents a follow-up enemy attack presentation", () => {
   const timeline = createEnemyAttackTimeline({
     events: [
-      { type: "enemyDefeated", wave: 1, enemyId: "forest-slime" },
+      { type: "enemyDefeated", wave: 1, enemyId: "forest_slime" },
       { type: "playerDamaged", amount: 8, playerHp: 92 },
     ],
   });
@@ -176,7 +176,7 @@ test("gameLost blocks later player input", () => {
 
 test("wave transition stays within timing config", () => {
   const timeline = createWaveTransitionTimeline({
-    events: [{ type: "waveStarted", wave: 2, enemyId: "pumpkin-fiend" }],
+    events: [{ type: "waveStarted", wave: 2, enemyId: "pumpkin_imp" }],
   });
 
   assert.equal(timeline.durationMs <= PRESENTATION_TIMING.WAVE_TRANSITION_MS, true);

@@ -38,6 +38,8 @@ export type HeroAnimationState =
   | "ultimate"
   | "hurt";
 
+export type MonsterAssetState = "idle" | "hit" | "attack" | "defeat";
+
 export interface SkinAnimation {
   id: string;
   frames: AssetKey[];
@@ -59,6 +61,7 @@ export interface Match3Skin {
   resources: Record<AssetKey, SkinResource>;
   pieceAssets: Record<PieceType, AssetKey>;
   monsterAssets: Record<string, AssetKey>;
+  monsterStateAssets: Record<string, Record<MonsterAssetState, AssetKey>>;
   vfxAssets: Record<string, AssetKey>;
   animations: SkinAnimationSet;
   sceneClasses: SkinSceneClasses;

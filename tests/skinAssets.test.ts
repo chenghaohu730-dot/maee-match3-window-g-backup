@@ -41,12 +41,17 @@ test("fairySkin covers all required resources, pieces, monsters, and vfx", () =>
 
   assertAssetKeys(Object.values(fairySkin.pieceAssets));
   assertAssetKeys(Object.values(fairySkin.monsterAssets));
+  assertAssetKeys(
+    Object.values(fairySkin.monsterStateAssets).flatMap((states) =>
+      Object.values(states),
+    ),
+  );
   assertAssetKeys(Object.values(fairySkin.vfxAssets));
   assert.equal(fairySkin.animations.yizai.idle.frames[0], "yizai_hero_idle");
   assert.equal(fairySkin.animations.yizai.idle.loop, true);
   assert.equal(fairySkin.animations.yizai.ultimate.loop, false);
   assert.equal(
-    fairySkin.animations.monsters["forest-slime"]?.frames[0],
+    fairySkin.animations.monsters.forest_slime?.frames[0],
     "monster_slime_idle",
   );
   assert.equal(
@@ -231,7 +236,7 @@ test("enemy ids map to readable monster names and combat state classes", () => {
   const html = renderGameplayScene({
     state: {
       ...createGameplayState(),
-      enemyId: "pumpkin-fiend",
+      enemyId: "pumpkin_imp",
       enemyName: "",
       enemyHp: 33,
       enemyMaxHp: 45,
@@ -248,7 +253,7 @@ test("enemy ids map to readable monster names and combat state classes", () => {
     skin: fairySkin,
   });
 
-  assert.equal(html.includes("南瓜怪"), true);
+  assert.equal(html.includes("南瓜小妖"), true);
   assert.equal(html.includes("enemy-state-idle"), true);
   assert.equal(html.includes("yizai-state-idle"), true);
   assert.equal(html.includes("火焰横扫"), true);
@@ -258,13 +263,15 @@ test("endless challenge renders infinite hp and lost results render zero score",
   const endlessHtml = renderGameplayScene({
     state: {
       ...createGameplayState(),
-      enemyId: "endless-challenge",
-      enemyName: "无尽挑战",
+      enemyId: "endless_demon_king",
+      enemyName: "魔王",
       enemyHp: Number.POSITIVE_INFINITY,
       enemyMaxHp: Number.POSITIVE_INFINITY,
+      enemyInfiniteHp: true,
+      totalDamageDealt: 2468,
       enemyAttackCounter: 2,
       enemyAttackInterval: 3,
-      wave: 7,
+      wave: 1,
       isEndlessWave: true,
     },
     pieces: createPieces(),
@@ -277,8 +284,10 @@ test("endless challenge renders infinite hp and lost results render zero score",
     skin: fairySkin,
   });
 
-  assert.equal(endlessHtml.includes("Wave 7/∞ 无尽挑战"), true);
-  assert.equal(endlessHtml.includes("∞/∞"), true);
+  assert.equal(endlessHtml.includes("Wave 1/∞ 无尽挑战"), true);
+  assert.equal(endlessHtml.includes("魔王"), true);
+  assert.equal(endlessHtml.includes("HP：∞"), true);
+  assert.equal(endlessHtml.includes("累计伤害：2468"), true);
 
   const lostHtml = renderGameplayScene({
     state: {
@@ -300,6 +309,50 @@ test("endless challenge renders infinite hp and lost results render zero score",
   assert.equal(lostHtml.includes("失败"), true);
   assert.equal(lostHtml.includes("本局分数 0"), true);
   assert.equal(lostHtml.includes("本局分数 880"), false);
+});
+
+test("missing demon king images keep the demon name and static fallback keys", () => {
+  const html = renderGameplayScene({
+    state: {
+      ...createGameplayState(),
+      enemyId: "endless_demon_king",
+      enemyName: "魔王",
+      enemyHp: Number.POSITIVE_INFINITY,
+      enemyMaxHp: Number.POSITIVE_INFINITY,
+      enemyInfiniteHp: true,
+      isEndlessWave: true,
+    },
+    pieces: createPieces(),
+    selected: null,
+    message: "无尽挑战开始。",
+    lastEvents: [],
+    progress: createDefaultProgress(),
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: fairySkin,
+    characterAnimations: {
+      yizai: "idle",
+      enemy: "hit",
+    },
+  });
+
+  assert.equal(html.includes("魔王"), true);
+  assert.equal(html.includes("data-asset-key=\"boss_demon_king_hit\""), true);
+  assert.equal(html.includes("data-enemy-asset-idle=\"boss_demon_king_idle\""), true);
+  assert.equal(html.includes("data-fallback-key=\"monster_slime_hit\""), true);
+  assert.equal(html.includes("童话龙王"), false);
+  assertForbiddenGuardianNamesAbsent(html);
+});
+
+test("forbidden endless guardian names are not present in fairy monster config", () => {
+  const configText = JSON.stringify({
+    resources: fairySkin.resources,
+    monsterAssets: fairySkin.monsterAssets,
+    monsterStateAssets: fairySkin.monsterStateAssets,
+  });
+
+  assert.equal(configText.includes(`endless_${"gate_guardian"}`), false);
+  assertForbiddenGuardianNamesAbsent(configText);
 });
 
 test("board reshuffle event renders the short gameplay feedback", () => {
@@ -388,6 +441,19 @@ function assertAssetKeys(keys: AssetKey[]): void {
   }
 }
 
+function assertForbiddenGuardianNamesAbsent(value: string): void {
+  const forbiddenNames = [
+    `星门${"守卫"}`,
+    `魔镜${"守卫"}`,
+    `宇宙${"守卫"}`,
+    `裂隙${"守卫"}`,
+  ];
+
+  for (const forbidden of forbiddenNames) {
+    assert.equal(value.includes(forbidden), false);
+  }
+}
+
 function withUnavailableResources(skin: typeof fairySkin): typeof fairySkin {
   return {
     ...skin,
@@ -410,12 +476,13 @@ function createGameplayState(): GameplayState {
     playerShield: 10,
     enemyHp: 24,
     enemyMaxHp: 30,
-    enemyId: "forest-slime",
+    enemyId: "forest_slime",
     enemyName: "森林史莱姆",
     wave: 1,
     totalWaves: 6,
     enemyAttackCounter: 0,
     enemyAttackInterval: 0,
+    totalDamageDealt: 34,
     lastDamage: 34,
     lastComboCount: 2,
     lastSkillText: "flameSlash",

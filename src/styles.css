@@ -928,6 +928,13 @@ p {
   background: linear-gradient(160deg, #f0e8ff, #7f5db9);
 }
 
+.boss-demon-king-card {
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at 50% 18%, rgb(244 114 182 / 82%), transparent 28%),
+    linear-gradient(160deg, #191724, #5b2242 54%, #141318);
+}
+
 .monster-placeholder span {
   color: rgb(94 42 47 / 84%);
   font-size: 13px;
@@ -997,6 +1004,17 @@ p {
   font-size: 10px;
   font-weight: 800;
   line-height: 1.2;
+}
+
+.hp-detail {
+  margin-top: 2px;
+  overflow: hidden;
+  color: #5e4a62;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .hp-track {

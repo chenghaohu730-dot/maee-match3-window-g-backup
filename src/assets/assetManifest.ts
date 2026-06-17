@@ -71,10 +71,32 @@ export const ASSET_MANIFEST = {
   monster_slime_defeat_sheet:
     "/assets/fairy/monsters/monster_slime_defeat_sheet.png",
   monster_pumpkin_idle: "/assets/fairy/monsters/monster_pumpkin_idle.png",
+  monster_pumpkin_hit: "/assets/fairy/monsters/monster_pumpkin_hit.png",
+  monster_pumpkin_attack: "/assets/fairy/monsters/monster_pumpkin_attack.png",
+  monster_pumpkin_defeat: "/assets/fairy/monsters/monster_pumpkin_defeat.png",
   monster_crow_idle: "/assets/fairy/monsters/monster_crow_idle.png",
+  monster_crow_hit: "/assets/fairy/monsters/monster_crow_hit.png",
+  monster_crow_attack: "/assets/fairy/monsters/monster_crow_attack.png",
+  monster_crow_defeat: "/assets/fairy/monsters/monster_crow_defeat.png",
   monster_tree_idle: "/assets/fairy/monsters/monster_tree_idle.png",
+  monster_tree_hit: "/assets/fairy/monsters/monster_tree_hit.png",
+  monster_tree_attack: "/assets/fairy/monsters/monster_tree_attack.png",
+  monster_tree_defeat: "/assets/fairy/monsters/monster_tree_defeat.png",
   monster_wolf_idle: "/assets/fairy/monsters/monster_wolf_idle.png",
+  monster_wolf_hit: "/assets/fairy/monsters/monster_wolf_hit.png",
+  monster_wolf_attack: "/assets/fairy/monsters/monster_wolf_attack.png",
+  monster_wolf_defeat: "/assets/fairy/monsters/monster_wolf_defeat.png",
   boss_dragon_idle: "/assets/fairy/monsters/boss_dragon_idle.png",
+  boss_dragon_hit: "/assets/fairy/monsters/boss_dragon_hit.png",
+  boss_dragon_attack: "/assets/fairy/monsters/boss_dragon_attack.png",
+  boss_dragon_defeat: "/assets/fairy/monsters/boss_dragon_defeat.png",
+  boss_demon_king_idle:
+    "/assets/fairy/monsters/boss_demon_king_idle.png",
+  boss_demon_king_hit: "/assets/fairy/monsters/boss_demon_king_hit.png",
+  boss_demon_king_attack:
+    "/assets/fairy/monsters/boss_demon_king_attack.png",
+  boss_demon_king_defeat:
+    "/assets/fairy/monsters/boss_demon_king_defeat.png",
 
   ui_hp_bar_bg: "/assets/fairy/ui/ui_hp_bar_bg.png",
   ui_hp_bar_player_fill: "/assets/fairy/ui/ui_hp_bar_player_fill.png",

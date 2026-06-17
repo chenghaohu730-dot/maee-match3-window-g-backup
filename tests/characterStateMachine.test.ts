@@ -84,10 +84,27 @@ test("playerDamaged maps to yizai hurt and enemy attack", () => {
 
 test("enemyDefeated maps enemy to defeat", () => {
   const snapshot = createCharacterAnimationSnapshot(baseState(), [
-    combatEvent({ type: "enemyDefeated", wave: 1, enemyId: "forest-slime" }),
+    combatEvent({ type: "enemyDefeated", wave: 1, enemyId: "forest_slime" }),
   ]);
 
   assert.equal(snapshot.enemy, "defeat");
+});
+
+test("infinite hp enemy state does not fall back to defeat", () => {
+  const snapshot = createCharacterAnimationSnapshot(
+    {
+      ...baseState(),
+      enemyHp: Number.POSITIVE_INFINITY,
+      enemyMaxHp: Number.POSITIVE_INFINITY,
+      enemyId: "endless_demon_king",
+      enemyName: "魔王",
+      enemyInfiniteHp: true,
+      isEndlessWave: true,
+    },
+    [],
+  );
+
+  assert.equal(snapshot.enemy, "idle");
 });
 
 function skillEvent(level: "skill" | "ultimate"): GameplayEvent {
@@ -119,12 +136,13 @@ function baseState(): GameplayState {
     playerShield: 0,
     enemyHp: 30,
     enemyMaxHp: 30,
-    enemyId: "forest-slime",
+    enemyId: "forest_slime",
     enemyName: "森林史莱姆",
     wave: 1,
     totalWaves: 6,
     enemyAttackCounter: 0,
     enemyAttackInterval: 0,
+    totalDamageDealt: 0,
     lastDamage: 0,
     lastComboCount: 0,
     lastVfxKeys: [],

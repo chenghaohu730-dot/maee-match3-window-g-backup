@@ -1,4 +1,5 @@
 import type { Match3Skin } from "../skins/skinTypes.ts";
+import type { AssetKey } from "../assets/assetManifest.ts";
 import { getSkinResource, hasImageResource } from "../skins/skinTypes.ts";
 import {
   CHARACTER_ANIMATION_CONFIGS,
@@ -246,6 +247,7 @@ export class CharacterAnimator<StateName extends string = string> {
     element.dataset.frameHeight = String(config.frameHeight);
     element.dataset.spriteColumns = String(playback.columns);
     element.dataset.spriteRows = String(playback.rows);
+    element.dataset.staticOnly = config.staticOnly ? "true" : "false";
     element.dataset.animationDurationMs = String(
       getSpriteAnimationDurationMs({
         frameCount: playback.frameCount,
@@ -326,7 +328,7 @@ export function mountCharacterAnimators(
 
       const animatorOptions: CharacterAnimatorOptions<string> = {
         characterId,
-        configs: getConfigMap(characterId),
+        configs: getConfigMap(characterId, element),
         anchors: CHARACTER_ANCHORS[characterId],
         element,
         skin,
@@ -383,6 +385,43 @@ export function resolveCharacterAnimationSource(
   }
 
   const sheetResource = getSkinResource(skin, config.key);
+
+  if (config.staticOnly) {
+    if (hasImageResource(sheetResource)) {
+      const source: CharacterAnimationSource = {
+        mode: "fallbackImage",
+        key: config.key,
+        path: sheetResource.path,
+      };
+
+      if (config.fallbackKey) {
+        source.fallbackKey = config.fallbackKey;
+        source.fallbackPath = getSkinResource(skin, config.fallbackKey).path;
+      }
+
+      return source;
+    }
+
+    if (config.fallbackKey) {
+      const fallbackResource = getSkinResource(skin, config.fallbackKey);
+
+      if (hasImageResource(fallbackResource)) {
+        return {
+          mode: "fallbackImage",
+          key: config.fallbackKey,
+          path: fallbackResource.path,
+          fallbackKey: config.fallbackKey,
+          fallbackPath: fallbackResource.path,
+        };
+      }
+    }
+
+    return {
+      mode: "placeholder",
+      key: config.fallbackKey ?? config.key,
+      path: "",
+    };
+  }
 
   if (hasImageResource(sheetResource)) {
     return createSheetSource(config.key, sheetResource.path, config, skin);
@@ -454,12 +493,71 @@ function createSheetSource(
 
 function getConfigMap(
   characterId: CharacterId,
+  element?: HTMLElement,
 ): Record<string, SpriteAnimationConfig<string>> {
-  return (
-    characterId === "yizai"
-      ? CHARACTER_ANIMATION_CONFIGS.yizai
-      : CHARACTER_ANIMATION_CONFIGS.enemy
-  ) as Record<string, SpriteAnimationConfig<string>>;
+  if (characterId === "yizai") {
+    return CHARACTER_ANIMATION_CONFIGS.yizai as Record<
+      string,
+      SpriteAnimationConfig<string>
+    >;
+  }
+
+  return createEnemyConfigMap(element) as Record<
+    string,
+    SpriteAnimationConfig<string>
+  >;
+}
+
+function createEnemyConfigMap(
+  element: HTMLElement | undefined,
+): typeof CHARACTER_ANIMATION_CONFIGS.enemy {
+  if (!element) {
+    return CHARACTER_ANIMATION_CONFIGS.enemy;
+  }
+
+  return {
+    idle: createEnemyStateConfig(element, "idle"),
+    hit: createEnemyStateConfig(element, "hit"),
+    attack: createEnemyStateConfig(element, "attack"),
+    defeat: createEnemyStateConfig(element, "defeat"),
+  };
+}
+
+function createEnemyStateConfig(
+  element: HTMLElement,
+  state: keyof typeof CHARACTER_ANIMATION_CONFIGS.enemy,
+): (typeof CHARACTER_ANIMATION_CONFIGS.enemy)[typeof state] {
+  const base = CHARACTER_ANIMATION_CONFIGS.enemy[state];
+  const assetKey = getEnemyStateAssetKey(element, state);
+
+  if (!assetKey) {
+    return base;
+  }
+
+  const { fallbackSheetKey: _fallbackSheetKey, ...baseWithoutSheet } = base;
+
+  return {
+    ...baseWithoutSheet,
+    key: assetKey,
+    fallbackKey: base.fallbackKey ?? base.key,
+    staticOnly: true,
+  };
+}
+
+function getEnemyStateAssetKey(
+  element: HTMLElement,
+  state: keyof typeof CHARACTER_ANIMATION_CONFIGS.enemy,
+): AssetKey | undefined {
+  switch (state) {
+    case "idle":
+      return element.dataset.enemyAssetIdle as AssetKey | undefined;
+    case "hit":
+      return element.dataset.enemyAssetHit as AssetKey | undefined;
+    case "attack":
+      return element.dataset.enemyAssetAttack as AssetKey | undefined;
+    case "defeat":
+      return element.dataset.enemyAssetDefeat as AssetKey | undefined;
+  }
 }
 
 function getCharacterIdFromElement(element: HTMLElement): CharacterId | null {

@@ -4,6 +4,7 @@ import {
   getSkinResource,
   hasImageResource,
   type Match3Skin,
+  type MonsterAssetState,
   type SkinAnimation,
 } from "../skins/skinTypes.ts";
 import type { AssetKey } from "../assets/assetManifest.ts";
@@ -294,6 +295,10 @@ function renderBattleStage(model: GameplayViewModel): string {
           state.enemyHp,
           state.enemyMaxHp,
           "enemy",
+          {
+            infinite: state.enemyInfiniteHp === true,
+            totalDamage: state.totalDamageDealt,
+          },
         )}
         ${renderAttackPips(
           skin,
@@ -316,18 +321,28 @@ function renderBattleHpPanel(
   current: number,
   max: number,
   variant: "player" | "enemy",
+  options: { infinite?: boolean; totalDamage?: number } = {},
 ): string {
-  const percent = getPercent(current, max);
+  const percent = options.infinite ? 100 : getPercent(current, max);
   const fillKey: AssetKey =
     variant === "player" ? "ui_hp_bar_player_fill" : "ui_hp_bar_enemy_fill";
   const panelClass = variant === "player" ? "player-hp-panel" : "enemy-hp-panel";
+  const valueText = options.infinite
+    ? "HP：∞"
+    : `${formatNumber(current)}/${formatNumber(max)}`;
+  const detailText = options.infinite
+    ? `<div class="hp-detail">累计伤害：${formatNumber(
+        options.totalDamage ?? 0,
+      )}</div>`
+    : "";
 
   return `
     <div class="${panelClass} hp-block">
       <div class="hp-label">
         <span>${escapeHtml(label)}</span>
-        <span>${formatNumber(current)}/${formatNumber(max)}</span>
+        <span>${valueText}</span>
       </div>
+      ${detailText}
       <div class="hp-track ${assetClasses(skin, "ui_hp_bar_bg")}" ${assetAttrs(
         skin,
         "ui_hp_bar_bg",
@@ -457,6 +472,7 @@ function renderEnemyCharacter(
 ): string {
   const config = getCharacterAnimationConfig("enemy", animationState);
   const key = getEnemyRenderAssetKey(skin, state, animationState, config);
+  const renderConfig = createEnemyRenderConfig(config, key, animationState);
   const animation = skin.animations.monsters[state.enemyId];
 
   return `
@@ -465,10 +481,13 @@ function renderEnemyCharacter(
       key,
     )} ${animation?.fallbackClass ?? ""} ${characterFallbackClass(
       animationState,
-    )}" ${assetAttrs(skin, key)} ${characterAnimationAttrs(
+    )}" ${assetAttrs(skin, key)} ${enemyStateAssetAttrs(
+      skin,
+      state.enemyId,
+    )} data-enemy-id="${escapeHtml(state.enemyId)}" ${characterAnimationAttrs(
       "enemy",
       animationState,
-      config,
+      renderConfig,
       `enemy_${animationState}`,
       getCharacterAnchors("enemy"),
     )}>
@@ -660,6 +679,11 @@ function renderResultPanel(state: GameplayState, skin: Match3Skin): string {
       )}" ${assetAttrs(skin, "modal_common")}>
         <h2>${title}</h2>
         <p>本局分数 ${score}</p>
+        ${
+          state.phase === "won"
+            ? `<button class="primary-button compact" type="button" data-action="start-endless">无尽挑战</button>`
+            : ""
+        }
         <button class="primary-button restart-button" type="button">再来一局</button>
         <button class="secondary-button compact" type="button" data-action="return-universe">返回宇宙</button>
       </div>
@@ -892,29 +916,66 @@ function getEnemyRenderAssetKey(
   animationState: EnemyAnimationState,
   config: SpriteAnimationConfig,
 ): AssetKey {
-  if (state.enemyId === "forest-slime") {
-    return getRenderAssetKey(config, skin);
-  }
-
-  if (animationState !== "idle") {
-    return getRenderAssetKey(config, skin);
-  }
-
-  return skin.monsterAssets[state.enemyId] ?? "monster_slime_idle";
+  return (
+    skin.monsterStateAssets[state.enemyId]?.[animationState] ??
+    (animationState === "idle"
+      ? skin.monsterAssets[state.enemyId]
+      : undefined) ??
+    getRenderAssetKey(config, skin)
+  );
 }
 
 function getEnemyDisplayName(enemyId: string): string {
   const names: Record<string, string> = {
-    "forest-slime": "森林史莱姆",
-    "pumpkin-fiend": "南瓜怪",
-    "crow-fiend": "乌鸦怪",
-    "thorn-treant": "荆棘树精",
-    "wolf-soldier": "狼兵",
-    "young-black-dragon-king": "黑龙幼王",
-    "endless-challenge": "无尽挑战",
+    forest_slime: "森林史莱姆",
+    pumpkin_imp: "南瓜小妖",
+    fairy_crow: "童话乌鸦",
+    tree_spirit: "森林树精",
+    forest_wolf: "森林狼",
+    fairy_dragon_boss: "童话龙王",
+    endless_demon_king: "魔王",
   };
 
   return names[enemyId] ?? enemyId;
+}
+
+function createEnemyRenderConfig(
+  config: SpriteAnimationConfig,
+  key: AssetKey,
+  state: EnemyAnimationState,
+): SpriteAnimationConfig {
+  const { fallbackSheetKey: _fallbackSheetKey, ...configWithoutSheet } = config;
+
+  return {
+    ...configWithoutSheet,
+    key,
+    fallbackKey: getFallbackEnemyAssetKey(state),
+    staticOnly: true,
+  };
+}
+
+function enemyStateAssetAttrs(skin: Match3Skin, enemyId: string): string {
+  const states = skin.monsterStateAssets[enemyId];
+
+  return (["idle", "hit", "attack", "defeat"] as const)
+    .map((state) => {
+      const key = states?.[state] ?? getFallbackEnemyAssetKey(state);
+      return `data-enemy-asset-${state}="${escapeHtml(key)}"`;
+    })
+    .join(" ");
+}
+
+function getFallbackEnemyAssetKey(state: MonsterAssetState): AssetKey {
+  switch (state) {
+    case "idle":
+      return "monster_slime_idle";
+    case "hit":
+      return "monster_slime_hit";
+    case "attack":
+      return "monster_slime_attack";
+    case "defeat":
+      return "monster_slime_defeat";
+  }
 }
 
 function playerStateClass(state: YizaiAnimationState): string {
@@ -999,6 +1060,10 @@ function characterAnimationAttrs(
     attrs.push(
       `data-fallback-sheet-key="${escapeHtml(config.fallbackSheetKey)}"`,
     );
+  }
+
+  if (config.staticOnly) {
+    attrs.push("data-static-only=\"true\"");
   }
 
   if (config.returnTo) {

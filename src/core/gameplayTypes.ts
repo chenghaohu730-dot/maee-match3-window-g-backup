@@ -24,6 +24,8 @@ export interface GameplayState {
   enemyAttackCounter: number;
   enemyAttackInterval: number;
   isEndlessWave?: boolean;
+  enemyInfiniteHp?: boolean;
+  totalDamageDealt: number;
   lastDamage: number;
   lastComboCount: number;
   lastSkillText?: string;

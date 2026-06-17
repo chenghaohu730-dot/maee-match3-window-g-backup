@@ -20,6 +20,7 @@ export class CombatSystem {
   private status: CombatStatus = "playing";
   private freezeTurns = 0;
   private armorBreak: ArmorBreakState | null = null;
+  private totalDamageDealt = 0;
 
   constructor(waves: EnemyWave[] = FAIRY_TALE_WAVES) {
     if (waves.length === 0) {
@@ -39,6 +40,7 @@ export class CombatSystem {
       status: this.status,
       freezeTurns: this.freezeTurns,
       armorBreak: this.armorBreak ? { ...this.armorBreak } : null,
+      totalDamageDealt: this.totalDamageDealt,
     };
   }
 
@@ -54,13 +56,15 @@ export class CombatSystem {
       return events;
     }
 
-    const enemy = this.enemy;
-    const damage = this.calculateEnemyDamage(totalCleared * 2);
-    enemy.hp = clampMin(roundCombatNumber(enemy.hp - damage), 0);
-    events.push({ type: "enemyDamaged", amount: damage, enemyHp: enemy.hp });
+    const damageResult = this.damageEnemy(totalCleared * 2);
+    events.push({
+      type: "enemyDamaged",
+      amount: damageResult.damage,
+      enemyHp: damageResult.enemyHp,
+    });
 
-    if (enemy.hp <= 0) {
-      this.handleEnemyDefeated(enemy, events);
+    if (damageResult.defeated && this.enemy) {
+      this.handleEnemyDefeated(this.enemy, events);
       return events;
     }
 
@@ -81,13 +85,15 @@ export class CombatSystem {
       return events;
     }
 
-    const enemy = this.enemy;
-    const damage = this.calculateEnemyDamage(safeAmount);
-    enemy.hp = clampMin(roundCombatNumber(enemy.hp - damage), 0);
-    events.push({ type: "enemyDamaged", amount: damage, enemyHp: enemy.hp });
+    const damageResult = this.damageEnemy(safeAmount);
+    events.push({
+      type: "enemyDamaged",
+      amount: damageResult.damage,
+      enemyHp: damageResult.enemyHp,
+    });
 
-    if (enemy.hp <= 0) {
-      this.handleEnemyDefeated(enemy, events);
+    if (damageResult.defeated && this.enemy) {
+      this.handleEnemyDefeated(this.enemy, events);
     }
 
     return events;
@@ -142,6 +148,7 @@ export class CombatSystem {
     this.player = createInitialPlayer();
     this.waveIndex = 0;
     this.status = "playing";
+    this.totalDamageDealt = 0;
     this.startCurrentWave();
   }
 
@@ -211,6 +218,42 @@ export class CombatSystem {
     return roundCombatNumber(baseDamage * multiplier);
   }
 
+  private damageEnemy(baseDamage: number): {
+    damage: number;
+    enemyHp: number;
+    defeated: boolean;
+  } {
+    const enemy = this.enemy;
+
+    if (!enemy) {
+      return {
+        damage: 0,
+        enemyHp: 0,
+        defeated: false,
+      };
+    }
+
+    const damage = this.calculateEnemyDamage(baseDamage);
+    this.totalDamageDealt = roundCombatNumber(this.totalDamageDealt + damage);
+
+    if (enemy.infiniteHp) {
+      enemy.hp = Number.POSITIVE_INFINITY;
+      enemy.maxHp = Number.POSITIVE_INFINITY;
+      return {
+        damage,
+        enemyHp: enemy.hp,
+        defeated: false,
+      };
+    }
+
+    enemy.hp = clampMin(roundCombatNumber(enemy.hp - damage), 0);
+    return {
+      damage,
+      enemyHp: enemy.hp,
+      defeated: enemy.hp <= 0,
+    };
+  }
+
   private damagePlayer(amount: number): number {
     const incomingDamage = sanitizeAmount(amount);
     const shieldBlocked = Math.min(this.player.shield, incomingDamage);
@@ -256,8 +299,8 @@ export class CombatSystem {
     this.enemy = {
       id: wave.id,
       name: wave.name,
-      maxHp: wave.hp,
-      hp: wave.hp,
+      maxHp: wave.infiniteHp ? Number.POSITIVE_INFINITY : wave.hp,
+      hp: wave.infiniteHp ? Number.POSITIVE_INFINITY : wave.hp,
       attackInterval: wave.attackInterval,
       attackCounter: 0,
       damage: wave.damage,
@@ -265,6 +308,10 @@ export class CombatSystem {
 
     if (wave.endless) {
       this.enemy.endless = true;
+    }
+
+    if (wave.infiniteHp) {
+      this.enemy.infiniteHp = true;
     }
 
     this.clearEnemyEffects();
@@ -295,6 +342,10 @@ function cloneWave(wave: EnemyWave): EnemyWave {
 
   if (wave.endless) {
     clone.endless = true;
+  }
+
+  if (wave.infiniteHp) {
+    clone.infiniteHp = true;
   }
 
   return clone;

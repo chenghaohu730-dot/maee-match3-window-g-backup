@@ -169,19 +169,18 @@ export const YIZAI_ANIMATION_CONFIG = {
 
 export const ENEMY_ANIMATION_CONFIG = {
   idle: {
-    key: "monster_slime_idle_sheet_pro",
-    fallbackSheetKey: "monster_slime_idle_sheet",
+    key: "monster_slime_idle",
     fallbackKey: "monster_slime_idle",
     frameWidth: 512,
     frameHeight: 512,
-    frameCount: 4,
+    frameCount: 1,
     fps: 6,
     loop: true,
     priority: 0,
+    staticOnly: true,
   },
   hit: {
-    key: "monster_slime_hit_sheet_pro",
-    fallbackSheetKey: "monster_slime_hit_sheet",
+    key: "monster_slime_hit",
     fallbackKey: "monster_slime_hit",
     frameWidth: 512,
     frameHeight: 512,
@@ -190,10 +189,10 @@ export const ENEMY_ANIMATION_CONFIG = {
     loop: false,
     returnTo: "idle",
     priority: 10,
+    staticOnly: true,
   },
   attack: {
-    key: "monster_slime_attack_sheet_pro",
-    fallbackSheetKey: "monster_slime_attack_sheet",
+    key: "monster_slime_attack",
     fallbackKey: "monster_slime_attack",
     frameWidth: 512,
     frameHeight: 512,
@@ -202,6 +201,7 @@ export const ENEMY_ANIMATION_CONFIG = {
     loop: false,
     returnTo: "idle",
     priority: 20,
+    staticOnly: true,
     frameEvents: [
       {
         frame: 3,
@@ -212,8 +212,7 @@ export const ENEMY_ANIMATION_CONFIG = {
     ],
   },
   defeat: {
-    key: "monster_slime_defeat_sheet_pro",
-    fallbackSheetKey: "monster_slime_defeat_sheet",
+    key: "monster_slime_defeat",
     fallbackKey: "monster_slime_defeat",
     frameWidth: 512,
     frameHeight: 512,
@@ -222,6 +221,7 @@ export const ENEMY_ANIMATION_CONFIG = {
     loop: false,
     returnTo: "idle",
     priority: 40,
+    staticOnly: true,
   },
 } as const satisfies CharacterAnimationConfigMap<EnemyAnimationState>;
 

@@ -9,6 +9,7 @@ import {
 import { GameplayController } from "../src/core/gameplayController.ts";
 import type { GameplayEvent } from "../src/core/gameplayTypes.ts";
 import type { EnemyWave } from "../src/core/combatTypes.ts";
+import { ENDLESS_CHALLENGE_WAVES } from "../src/core/waves.ts";
 
 const RED: PieceType = 0;
 const BLUE: PieceType = 1;
@@ -323,6 +324,29 @@ test("enemy defeated by board-effect follow-up damage does not counterattack", (
   assert.equal(hasGameplayEvent(events, "boardEffectResolved"), true);
   assert.equal(hasCombatEvent(events, "enemyDefeated"), true);
   assert.equal(hasCombatEvent(events, "playerDamaged"), false);
+});
+
+test("endless demon king accumulates damage and does not trigger victory", () => {
+  const controller = new GameplayController({
+    initialTypes: playableTypes,
+    rng: fixedRng(0.73),
+    waves: ENDLESS_CHALLENGE_WAVES,
+  });
+  controller.startGame();
+
+  const events = controller.handleResolveComplete(summary(3));
+  const state = controller.getState();
+
+  assert.equal(state.enemyId, "endless_demon_king");
+  assert.equal(state.enemyName, "魔王");
+  assert.equal(state.enemyInfiniteHp, true);
+  assert.equal(state.enemyHp, Number.POSITIVE_INFINITY);
+  assert.equal(state.totalDamageDealt, 6);
+  assert.equal(state.lastDamage, 6);
+  assert.equal(state.score, 30);
+  assert.equal(state.phase, "playing");
+  assert.equal(hasCombatEvent(events, "enemyDefeated"), false);
+  assert.equal(hasCombatEvent(events, "gameWon"), false);
 });
 
 function createController(waves?: EnemyWave[]): GameplayController {

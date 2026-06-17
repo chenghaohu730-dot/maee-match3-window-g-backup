@@ -180,6 +180,8 @@ export class GameplayController {
       totalWaves: this.totalWaves,
       enemyAttackCounter: enemy?.attackCounter ?? 0,
       enemyAttackInterval: enemy?.attackInterval ?? 0,
+      enemyInfiniteHp: enemy?.infiniteHp === true,
+      totalDamageDealt: combatState.totalDamageDealt,
       lastDamage: this.lastDamage,
       lastComboCount: this.lastComboCount,
       lastVfxKeys: [...this.lastVfxKeys],

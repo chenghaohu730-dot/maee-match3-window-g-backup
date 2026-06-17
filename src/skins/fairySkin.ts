@@ -2,6 +2,7 @@ import type { AssetKey } from "../assets/assetManifest.ts";
 import type { Match3Skin, SkinResource } from "./skinTypes.ts";
 import {
   MONSTER_ASSETS,
+  MONSTER_STATE_ASSETS,
   PIECE_ASSETS,
   VFX_ASSETS,
   createSkinAnimations,
@@ -283,27 +284,122 @@ const fairyOverrides: Partial<
   monster_pumpkin_idle: {
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-pumpkin-card",
-    fallbackLabel: "南瓜怪",
+    fallbackLabel: "南瓜小妖",
+  },
+  monster_pumpkin_hit: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-pumpkin-card",
+    fallbackLabel: "南瓜小妖受击",
+  },
+  monster_pumpkin_attack: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-pumpkin-card",
+    fallbackLabel: "南瓜小妖攻击",
+  },
+  monster_pumpkin_defeat: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-pumpkin-card",
+    fallbackLabel: "南瓜小妖退场",
   },
   monster_crow_idle: {
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-crow-card",
-    fallbackLabel: "乌鸦怪",
+    fallbackLabel: "童话乌鸦",
+  },
+  monster_crow_hit: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-crow-card",
+    fallbackLabel: "童话乌鸦受击",
+  },
+  monster_crow_attack: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-crow-card",
+    fallbackLabel: "童话乌鸦攻击",
+  },
+  monster_crow_defeat: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-crow-card",
+    fallbackLabel: "童话乌鸦退场",
   },
   monster_tree_idle: {
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-tree-card",
-    fallbackLabel: "荆棘树精",
+    fallbackLabel: "森林树精",
+  },
+  monster_tree_hit: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-tree-card",
+    fallbackLabel: "森林树精受击",
+  },
+  monster_tree_attack: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-tree-card",
+    fallbackLabel: "森林树精攻击",
+  },
+  monster_tree_defeat: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-tree-card",
+    fallbackLabel: "森林树精退场",
   },
   monster_wolf_idle: {
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster monster-wolf-card",
-    fallbackLabel: "狼兵",
+    fallbackLabel: "森林狼",
+  },
+  monster_wolf_hit: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-wolf-card",
+    fallbackLabel: "森林狼受击",
+  },
+  monster_wolf_attack: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-wolf-card",
+    fallbackLabel: "森林狼攻击",
+  },
+  monster_wolf_defeat: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster monster-wolf-card",
+    fallbackLabel: "森林狼退场",
   },
   boss_dragon_idle: {
     fallbackClass:
       "asset-fallback fallback-fairy fallback-monster boss-dragon-card",
-    fallbackLabel: "黑龙幼王",
+    fallbackLabel: "童话龙王",
+  },
+  boss_dragon_hit: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster boss-dragon-card",
+    fallbackLabel: "童话龙王受击",
+  },
+  boss_dragon_attack: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster boss-dragon-card",
+    fallbackLabel: "童话龙王攻击",
+  },
+  boss_dragon_defeat: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster boss-dragon-card",
+    fallbackLabel: "童话龙王退场",
+  },
+  boss_demon_king_idle: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster boss-demon-king-card",
+    fallbackLabel: "魔王",
+  },
+  boss_demon_king_hit: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster boss-demon-king-card",
+    fallbackLabel: "魔王受击",
+  },
+  boss_demon_king_attack: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster boss-demon-king-card",
+    fallbackLabel: "魔王攻击",
+  },
+  boss_demon_king_defeat: {
+    fallbackClass:
+      "asset-fallback fallback-fairy fallback-monster boss-demon-king-card",
+    fallbackLabel: "魔王退场",
   },
   ui_hp_bar_bg: {
     fallbackClass: "asset-fallback fallback-fairy fallback-panel ui-hp-bar-bg",
@@ -342,6 +438,7 @@ export const fairySkin: Match3Skin = {
   resources: createSkinResources("fairy", fairyOverrides),
   pieceAssets: PIECE_ASSETS,
   monsterAssets: MONSTER_ASSETS,
+  monsterStateAssets: MONSTER_STATE_ASSETS,
   vfxAssets: VFX_ASSETS,
   animations: createSkinAnimations("fairy"),
   sceneClasses: {

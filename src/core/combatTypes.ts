@@ -7,6 +7,7 @@ export interface EnemyWave {
   attackInterval: number;
   damage: number;
   endless?: boolean;
+  infiniteHp?: boolean;
 }
 
 export interface PlayerState {
@@ -24,6 +25,7 @@ export interface EnemyState {
   attackCounter: number;
   damage: number;
   endless?: boolean;
+  infiniteHp?: boolean;
 }
 
 export type CombatStatus = "playing" | "won" | "lost";
@@ -41,6 +43,7 @@ export interface CombatState {
   status: CombatStatus;
   freezeTurns: number;
   armorBreak: ArmorBreakState | null;
+  totalDamageDealt: number;
 }
 
 export type CombatMoveSummary = {

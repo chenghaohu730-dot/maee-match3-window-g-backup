@@ -5,6 +5,10 @@ import type {
   SwapResult,
 } from "../core/board.ts";
 import { GameplayController } from "../core/gameplayController.ts";
+import {
+  ENDLESS_CHALLENGE_WAVES,
+  FAIRY_TALE_WAVES,
+} from "../core/waves.ts";
 import { defaultSkin } from "../skins/defaultSkin.ts";
 import { fairySkin } from "../skins/fairySkin.ts";
 import type { Match3Skin } from "../skins/skinTypes.ts";
@@ -59,7 +63,7 @@ import { PRESENTATION_TIMING } from "./presentationTiming.ts";
 type DamageFloatTarget = "enemy" | "player" | "both";
 
 export function mountGameApp(root: HTMLDivElement): void {
-  const controller = new GameplayController();
+  let controller = new GameplayController({ waves: FAIRY_TALE_WAVES });
   const storage = getLocalStorage();
   let scene: SceneName = "start";
   let modal: ModalKind | null = null;
@@ -228,6 +232,7 @@ export function mountGameApp(root: HTMLDivElement): void {
 
           if (result.scene === "gameplay") {
             activeGameplaySkin = resolveSkinForUniverse(universeId);
+            controller = new GameplayController({ waves: FAIRY_TALE_WAVES });
             controller.startGame();
             lastCommittedScore = 0;
             selected = null;
@@ -239,6 +244,20 @@ export function mountGameApp(root: HTMLDivElement): void {
         });
       },
     );
+
+    root
+      .querySelector<HTMLButtonElement>('[data-action="start-endless"]')
+      ?.addEventListener("click", () => {
+        commitScoreProgress();
+        controller = new GameplayController({ waves: ENDLESS_CHALLENGE_WAVES });
+        controller.startGame();
+        activeGameplaySkin = fairySkin;
+        lastCommittedScore = 0;
+        selected = null;
+        showTurnFeedback = false;
+        message = "无尽挑战开始：击败不了魔王，坚持到最后。";
+        render();
+      });
 
     root.querySelector<HTMLButtonElement>(".restart-button")?.addEventListener(
       "click",
@@ -543,10 +562,13 @@ export function mountGameApp(root: HTMLDivElement): void {
       label.textContent = `${formatNumber(current)}/${formatNumber(max)}`;
     }
 
-    fill.style.setProperty(
-      "width",
-      `${max <= 0 ? 0 : Math.max(0, Math.min(100, (current / max) * 100))}%`,
-    );
+    const percent = !Number.isFinite(max)
+      ? 100
+      : max <= 0
+        ? 0
+        : Math.max(0, Math.min(100, (current / max) * 100));
+
+    fill.style.setProperty("width", `${percent}%`);
     fill.style.setProperty(
       "--hp-tween-ms",
       `${PRESENTATION_TIMING.HP_TWEEN_MS}ms`,
@@ -678,6 +700,10 @@ function getLatestPlayerDamage(
 }
 
 function formatNumber(value: number): string {
+  if (!Number.isFinite(value)) {
+    return "∞";
+  }
+
   return Number.isInteger(value)
     ? String(value)
     : value.toFixed(1).replace(/\.0$/, "");
