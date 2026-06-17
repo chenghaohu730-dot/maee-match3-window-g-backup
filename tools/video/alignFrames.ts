@@ -359,7 +359,7 @@ async function writeAlignedFrame(
     .png()
     .toBuffer();
 
-  await sharp({
+  let outputBuffer = await sharp({
     create: {
       width: alignment.canvasWidth,
       height: alignment.canvasHeight,
@@ -369,7 +369,67 @@ async function writeAlignedFrame(
   })
     .composite([{ input: scaled, left: plan.left, top: plan.top }])
     .png({ compressionLevel: 9, adaptiveFiltering: true, force: true })
+    .toBuffer();
+
+  outputBuffer = await applyFrameEdgeFade(outputBuffer, alignment.edgeFadePx ?? 0);
+
+  await sharp(outputBuffer)
+    .png({ compressionLevel: 9, adaptiveFiltering: true, force: true })
     .toFile(outputPath);
+}
+
+export async function applyFrameEdgeFade(
+  input: Buffer,
+  fadePx: number,
+): Promise<Buffer> {
+  const safeFadePx = Math.max(0, Math.floor(fadePx));
+
+  if (safeFadePx <= 0) {
+    return input;
+  }
+
+  const { data, info } = await sharp(input)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  if (info.channels !== 4) {
+    throw new Error("Expected RGBA input after alpha normalization");
+  }
+
+  const fadeWidth = Math.min(
+    safeFadePx,
+    Math.floor(info.width / 2),
+    Math.floor(info.height / 2),
+  );
+
+  if (fadeWidth <= 0) {
+    return input;
+  }
+
+  for (let y = 0; y < info.height; y++) {
+    for (let x = 0; x < info.width; x++) {
+      const edgeDistance = Math.min(x, y, info.width - 1 - x, info.height - 1 - y);
+
+      if (edgeDistance >= fadeWidth) {
+        continue;
+      }
+
+      const alphaOffset = (y * info.width + x) * 4 + 3;
+      const alpha = data[alphaOffset] ?? 0;
+      data[alphaOffset] = Math.round(alpha * (edgeDistance / fadeWidth));
+    }
+  }
+
+  return sharp(data, {
+    raw: {
+      width: info.width,
+      height: info.height,
+      channels: 4,
+    },
+  })
+    .png({ compressionLevel: 9, adaptiveFiltering: true, force: true })
+    .toBuffer();
 }
 
 async function createCropBuffer(

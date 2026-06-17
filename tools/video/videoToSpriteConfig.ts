@@ -25,6 +25,7 @@ export interface FrameAlignmentSettings {
   padding: number;
   xOffset: number;
   allowRightEffectSpace: boolean;
+  edgeFadePx?: number;
   subjectScale?: FrameSubjectScaleSettings;
 }
 
@@ -231,6 +232,7 @@ export const videoSpriteActionConfigs = {
     maxBytes: 72 * 1024 * 1024,
   }, {
     alignment: {
+      edgeFadePx: 8,
       xOffset: -8,
       baselineY: 503,
       subjectScale: fixedSubjectScale({
@@ -247,6 +249,7 @@ export const videoSpriteActionConfigs = {
     maxBytes: 96 * 1024 * 1024,
   }, {
     alignment: {
+      edgeFadePx: 8,
       xOffset: -6,
       baselineY: 505,
       subjectScale: fixedSubjectScale({
@@ -376,6 +379,14 @@ export function validateVideoSpriteActionShape(
     throw new Error(
       `${config.action}: baselineY ${config.alignment.baselineY} exceeds canvas height ${config.alignment.canvasHeight}`,
     );
+  }
+
+  if (
+    config.alignment.edgeFadePx !== undefined &&
+    (!Number.isFinite(config.alignment.edgeFadePx) ||
+      config.alignment.edgeFadePx < 0)
+  ) {
+    throw new Error(`${config.action}: edgeFadePx must be >= 0`);
   }
 
   const subjectScale = config.alignment.subjectScale;

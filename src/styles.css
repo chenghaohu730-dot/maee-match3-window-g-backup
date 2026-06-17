@@ -964,12 +964,24 @@ p {
   animation: yizai-skill-ready 360ms ease-out both;
 }
 
+.yizai-state-skill .maee-placeholder.has-image,
+.yizai-state-skill .maee-placeholder.character-sheet {
+  box-shadow: none;
+  animation: yizai-skill-sheet-ready 360ms ease-out both;
+}
+
 .yizai-state-ultimate .maee-placeholder {
   box-shadow:
     0 0 18px rgb(250 204 21 / 46%),
     0 0 32px rgb(96 165 250 / 40%),
     inset 0 0 0 1px rgb(255 255 255 / 58%);
   animation: yizai-ultimate-ready 540ms ease-out both;
+}
+
+.yizai-state-ultimate .maee-placeholder.has-image,
+.yizai-state-ultimate .maee-placeholder.character-sheet {
+  box-shadow: none;
+  animation: yizai-ultimate-sheet-ready 540ms ease-out both;
 }
 
 .yizai-state-hurt .maee-placeholder {
@@ -2361,6 +2373,26 @@ p {
   }
 }
 
+@keyframes yizai-skill-sheet-ready {
+  0% {
+    filter: brightness(1) drop-shadow(0 0 16px rgb(96 165 250 / 42%));
+    transform: translateY(0) scale(1);
+  }
+
+  45% {
+    filter:
+      brightness(1.18)
+      saturate(1.1)
+      drop-shadow(0 0 18px rgb(96 165 250 / 48%));
+    transform: translateY(-4px) scale(1.04);
+  }
+
+  100% {
+    filter: brightness(1) drop-shadow(0 0 16px rgb(96 165 250 / 42%));
+    transform: translateY(0) scale(1);
+  }
+}
+
 @keyframes yizai-ultimate-ready {
   0%,
   100% {
@@ -2378,6 +2410,44 @@ p {
   }
 
   66% {
+    transform: translate(-2px, 1px) scale(1.06);
+  }
+}
+
+@keyframes yizai-ultimate-sheet-ready {
+  0%,
+  100% {
+    filter:
+      brightness(1)
+      drop-shadow(0 0 14px rgb(250 204 21 / 38%))
+      drop-shadow(0 0 18px rgb(96 165 250 / 32%));
+    transform: translate(0, 0) scale(1);
+  }
+
+  22% {
+    filter:
+      brightness(1.2)
+      saturate(1.18)
+      drop-shadow(0 0 16px rgb(250 204 21 / 44%))
+      drop-shadow(0 0 20px rgb(96 165 250 / 36%));
+    transform: translate(-2px, -4px) scale(1.1);
+  }
+
+  44% {
+    filter:
+      brightness(1.14)
+      saturate(1.12)
+      drop-shadow(0 0 15px rgb(250 204 21 / 40%))
+      drop-shadow(0 0 19px rgb(96 165 250 / 34%));
+    transform: translate(3px, -3px) scale(1.08);
+  }
+
+  66% {
+    filter:
+      brightness(1.08)
+      saturate(1.08)
+      drop-shadow(0 0 14px rgb(250 204 21 / 38%))
+      drop-shadow(0 0 18px rgb(96 165 250 / 32%));
     transform: translate(-2px, 1px) scale(1.06);
   }
 }

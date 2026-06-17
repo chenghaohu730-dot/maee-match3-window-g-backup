@@ -6,6 +6,7 @@ import test from "node:test";
 import sharp from "sharp";
 import {
   alignActionFrames,
+  applyFrameEdgeFade,
   buildPlacementPlan,
   readAlphaBBox,
 } from "../tools/video/alignFrames.ts";
@@ -75,6 +76,12 @@ test("video sprite config enables fixed subject scaling for pro yizai sheets", (
   }
 });
 
+test("video sprite config fades skill and ultimate frame edges", () => {
+  assert.equal(videoSpriteActionConfigs.skill.alignment.edgeFadePx, 8);
+  assert.equal(videoSpriteActionConfigs.ultimate.alignment.edgeFadePx, 8);
+  assert.equal(videoSpriteActionConfigs.attack.alignment.edgeFadePx, undefined);
+});
+
 test("video sprite config validates manual sample ranges", () => {
   assert.doesNotThrow(() =>
     validateVideoSpriteActionShape(
@@ -115,6 +122,31 @@ test("applyChromaKey removes green while preserving white subject pixels", () =>
   assert.equal(data[4], 255);
   assert.equal(data[5], 255);
   assert.equal(data[6], 255);
+});
+
+test("applyFrameEdgeFade clears the outer alpha edge while keeping center pixels", async () => {
+  const input = await sharp({
+    create: {
+      width: 8,
+      height: 8,
+      channels: 4,
+      background: { r: 255, g: 255, b: 255, alpha: 1 },
+    },
+  })
+    .png()
+    .toBuffer();
+
+  const faded = await applyFrameEdgeFade(input, 2);
+  const { data, info } = await sharp(faded)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const alphaAt = (x: number, y: number): number =>
+    data[(y * info.width + x) * 4 + 3] ?? 0;
+
+  assert.equal(alphaAt(0, 0), 0);
+  assert.equal(alphaAt(1, 4) > 0, true);
+  assert.equal(alphaAt(4, 4), 255);
 });
 
 test("readAlphaBBox finds the visible subject bounds", async () => {
