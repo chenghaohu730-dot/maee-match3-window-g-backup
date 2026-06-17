@@ -13,6 +13,7 @@ const FALLBACK_DURATION_MS = 620;
 const BOARD_SIZE = 8;
 
 type SkillVfxDefinition = Omit<SkillVfxPresentation, "key">;
+type SkillVfxRenderScope = "board" | "battle";
 
 const FALLBACK_PRESENTATION: SkillVfxDefinition = {
   label: "技能闪光",
@@ -242,12 +243,30 @@ export function buildSkillVfxLayerModel(
   return model;
 }
 
-export function renderSkillVfxLayer(input: SkillVfxLayerInput): string {
+export function renderSkillVfxLayer(
+  input: SkillVfxLayerInput,
+  scope: SkillVfxRenderScope = "board",
+): string {
   const model = buildSkillVfxLayerModel(input);
 
   if (!model) {
     return "";
   }
+
+  const boardOnlySpans =
+    scope === "board"
+      ? `
+      <span class="skill-vfx-board-glow"></span>
+      <span class="skill-vfx-row-sweep"></span>
+      <span class="skill-vfx-fall fall-1"></span>
+      <span class="skill-vfx-fall fall-2"></span>
+      <span class="skill-vfx-fall fall-3"></span>
+      <span class="skill-vfx-fall fall-4"></span>
+      <span class="skill-vfx-chain-dot dot-1"></span>
+      <span class="skill-vfx-chain-dot dot-2"></span>
+      <span class="skill-vfx-chain-dot dot-3"></span>
+      <span class="skill-vfx-chain-dot dot-4"></span>`
+      : "";
 
   return `
     <div
@@ -257,8 +276,7 @@ export function renderSkillVfxLayer(input: SkillVfxLayerInput): string {
       data-vfx-level="${model.level}"
       aria-hidden="true"
     >
-      <span class="skill-vfx-board-glow"></span>
-      <span class="skill-vfx-row-sweep"></span>
+      ${boardOnlySpans}
       <span class="skill-vfx-core"></span>
       <span class="skill-vfx-beam"></span>
       <span class="skill-vfx-impact"></span>
@@ -267,14 +285,6 @@ export function renderSkillVfxLayer(input: SkillVfxLayerInput): string {
       <span class="skill-vfx-burst burst-2"></span>
       <span class="skill-vfx-burst burst-3"></span>
       <span class="skill-vfx-burst burst-4"></span>
-      <span class="skill-vfx-fall fall-1"></span>
-      <span class="skill-vfx-fall fall-2"></span>
-      <span class="skill-vfx-fall fall-3"></span>
-      <span class="skill-vfx-fall fall-4"></span>
-      <span class="skill-vfx-chain-dot dot-1"></span>
-      <span class="skill-vfx-chain-dot dot-2"></span>
-      <span class="skill-vfx-chain-dot dot-3"></span>
-      <span class="skill-vfx-chain-dot dot-4"></span>
       <span class="skill-vfx-caption">${escapeHtml(model.text)}</span>
       ${model.comboText ? `<span class="skill-vfx-combo">${escapeHtml(model.comboText)}</span>` : ""}
     </div>
@@ -292,7 +302,7 @@ export function mountSkillVfxLayer(
     return null;
   }
 
-  const layer = createSkillVfxElement(input);
+  const layer = createSkillVfxElement(input, "board");
 
   if (!layer) {
     return null;
@@ -318,7 +328,9 @@ export function mountSkillVfxLayer(
   const battleZone = root.querySelector<HTMLElement>(".battle-zone");
   const combatPanel = root.querySelector<HTMLElement>(".combat-info-panel");
   const battleVfxLayer = root.querySelector<HTMLElement>(".battle-vfx-layer");
-  const battleLayer = battleVfxLayer ? createSkillVfxElement(input) : null;
+  const battleLayer = battleVfxLayer
+    ? createSkillVfxElement(input, "battle")
+    : null;
 
   stage.classList.add(...boardClasses);
   battleZone?.classList.add(...battleClasses);
@@ -341,9 +353,12 @@ export function mountSkillVfxLayer(
   };
 }
 
-function createSkillVfxElement(input: SkillVfxLayerInput): HTMLElement | null {
+function createSkillVfxElement(
+  input: SkillVfxLayerInput,
+  scope: SkillVfxRenderScope,
+): HTMLElement | null {
   const wrapper = document.createElement("div");
-  wrapper.innerHTML = renderSkillVfxLayer(input).trim();
+  wrapper.innerHTML = renderSkillVfxLayer(input, scope).trim();
   const layer = wrapper.firstElementChild;
 
   return layer instanceof HTMLElement ? layer : null;

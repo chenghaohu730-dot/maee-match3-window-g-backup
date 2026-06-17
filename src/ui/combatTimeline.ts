@@ -21,6 +21,13 @@ import type {
 
 type SkillTimelineLevel = "skill" | "ultimate" | undefined;
 type YizaiTurnAction = "attack" | "skill" | "ultimate";
+type EnemyDamageTimelineStep = {
+  action: YizaiTurnAction;
+  amount: number;
+  hp: number;
+  maxHp: number;
+  lethal: boolean;
+};
 
 const ACTION_GAP_MS = 40;
 const ACTION_START_MS = 100;
@@ -235,10 +242,14 @@ export function getCombatEvents(
 
 function buildQueuedTurnTimeline(
   input: TurnPresentationInput,
-  actions: readonly YizaiTurnAction[],
+  requestedActions: readonly YizaiTurnAction[],
 ): CombatTimeline {
   const events: CombatTimelineEvent[] = [];
-  const defeated = hasCombatEvent(input.gameplayEvents, "enemyDefeated");
+  const damagePlan = buildEnemyDamageTimeline(input, requestedActions);
+  const actions = damagePlan ? damagePlan.map((step) => step.action) : requestedActions;
+  const defeated =
+    damagePlan?.some((step) => step.lethal) === true ||
+    hasCombatEvent(input.gameplayEvents, "enemyDefeated");
   const waveStarted = hasCombatEvent(input.gameplayEvents, "waveStarted");
   const won = hasCombatEvent(input.gameplayEvents, "gameWon");
   const playerDamaged = hasCombatEvent(input.gameplayEvents, "playerDamaged");
@@ -246,6 +257,7 @@ function buildQueuedTurnTimeline(
   const chainExtension = getChainExtension(input.chainCount, 70);
   let actionStart = ACTION_START_MS;
   let firstHitAtMs: number | undefined;
+  let lethalHitAtMs: number | undefined;
   let finalActionEndMs = 0;
 
   addEvent(events, "board.swapComplete", 0, 0, "medium", true);
@@ -255,18 +267,27 @@ function buildQueuedTurnTimeline(
     addEvent(events, "board.ultimateFocus", 0, 180, "medium", true);
   }
 
-  for (const action of actions) {
+  for (let index = 0; index < actions.length; index++) {
+    const action = actions[index]!;
     const timing = getYizaiActionTiming(action);
+    const hitAtMs = actionStart + timing.hitOffsetMs;
+    const damageStep = damagePlan?.[index];
 
     addYizaiActionEvents(events, action, actionStart);
-    firstHitAtMs ??= actionStart + timing.hitOffsetMs;
+    firstHitAtMs ??= hitAtMs;
+    if (damageStep) {
+      addEnemyDamageEvents(events, hitAtMs, damageStep.lethal, damageStep);
+      if (damageStep.lethal) {
+        lethalHitAtMs = hitAtMs;
+      }
+    }
     finalActionEndMs = actionStart + timing.durationMs;
     actionStart = finalActionEndMs + ACTION_GAP_MS;
   }
 
   const damageAtMs = firstHitAtMs ?? PRESENTATION_TIMING.NORMAL_HIT_MS;
 
-  if (hasCombatEvent(input.gameplayEvents, "enemyDamaged")) {
+  if (!damagePlan && hasCombatEvent(input.gameplayEvents, "enemyDamaged")) {
     addEnemyDamageEvents(events, damageAtMs, defeated);
   }
 
@@ -284,24 +305,36 @@ function buildQueuedTurnTimeline(
 
   const settleStart = Math.max(300, finalActionEndMs + 20);
   const settleDuration = getSettleDuration(kind, chainExtension);
+  const settleEndMs = settleStart + settleDuration;
 
   addEvent(events, "board.settle", settleStart, settleDuration, "medium", true);
-  let inputUnlockAtMs = Math.max(settleStart + settleDuration, getTargetDuration(kind));
+  let inputUnlockAtMs = Math.max(settleEndMs, getTargetDuration(kind));
 
   if (playerDamaged && !defeated && !won) {
     inputUnlockAtMs = Math.max(
       inputUnlockAtMs,
-      addEnemyCounterAttackEvents(events, settleStart + settleDuration + ACTION_GAP_MS),
+      addEnemyCounterAttackEvents(events, settleEndMs + ACTION_GAP_MS),
     );
   }
+
+  const defeatAtMs = (lethalHitAtMs ?? damageAtMs) + 160;
+  const waveStartAtMs = Math.max(
+    settleEndMs,
+    getEnemyDefeatEndMs(defeatAtMs),
+  );
 
   addTerminalAndWaveEvents(events, {
     defeated,
     waveStarted,
     won,
     lost: false,
-    defeatAtMs: damageAtMs + 160,
+    defeatAtMs,
+    waveStartAtMs,
   });
+
+  if (waveStarted && !won) {
+    inputUnlockAtMs = Math.max(inputUnlockAtMs, waveStartAtMs);
+  }
 
   return createTimeline(
     kind,
@@ -316,12 +349,149 @@ function addEnemyDamageEvents(
   events: CombatTimelineEvent[],
   hitAtMs: number,
   defeated: boolean,
+  damageStep?: EnemyDamageTimelineStep,
 ): void {
   addEvent(events, "character.enemy.hit", hitAtMs, defeated ? 180 : 260, "medium", false);
   addEvent(events, "combat.damageNumber", hitAtMs, PRESENTATION_TIMING.DAMAGE_TEXT_MS, "medium", false, {
     target: "enemy",
+    ...(damageStep ? { amount: damageStep.amount } : {}),
   });
-  addEvent(events, "combat.enemyHpTween", hitAtMs + 20, PRESENTATION_TIMING.HP_TWEEN_MS, defeated ? "high" : "medium", true);
+  addEvent(
+    events,
+    "combat.enemyHpTween",
+    hitAtMs + 20,
+    PRESENTATION_TIMING.HP_TWEEN_MS,
+    defeated ? "high" : "medium",
+    true,
+    damageStep
+      ? {
+          target: "enemy",
+          hp: damageStep.hp,
+          maxHp: damageStep.maxHp,
+        }
+      : undefined,
+  );
+}
+
+function buildEnemyDamageTimeline(
+  input: TurnPresentationInput,
+  actions: readonly YizaiTurnAction[],
+): EnemyDamageTimelineStep[] | null {
+  const totalDamage = getTotalEnemyDamage(input.gameplayEvents);
+
+  if (totalDamage <= 0) {
+    return null;
+  }
+
+  const rawDamageParts = buildEnemyDamageParts(input, actions, totalDamage);
+  const state = input.preState;
+  const maxHp = state?.enemyMaxHp ?? input.state?.enemyMaxHp ?? 0;
+
+  if (
+    !state ||
+    state.enemyInfiniteHp === true ||
+    !Number.isFinite(state.enemyHp)
+  ) {
+    return rawDamageParts
+      .map((amount, index) => ({
+        action: actions[index] ?? "attack",
+        amount,
+        hp: Number.isFinite(input.state?.enemyHp)
+          ? input.state?.enemyHp ?? 0
+          : Number.POSITIVE_INFINITY,
+        maxHp,
+        lethal: false,
+      }))
+      .filter((step) => step.amount > 0);
+  }
+
+  const steps: EnemyDamageTimelineStep[] = [];
+  let remainingHp = Math.max(0, state.enemyHp);
+
+  for (let index = 0; index < rawDamageParts.length; index++) {
+    if (remainingHp <= 0) {
+      break;
+    }
+
+    const rawAmount = rawDamageParts[index] ?? 0;
+    const amount = roundTimelineNumber(Math.min(rawAmount, remainingHp));
+
+    if (amount <= 0) {
+      continue;
+    }
+
+    remainingHp = roundTimelineNumber(Math.max(0, remainingHp - amount));
+    steps.push({
+      action: actions[index] ?? "attack",
+      amount,
+      hp: remainingHp,
+      maxHp,
+      lethal: remainingHp <= 0,
+    });
+
+    if (remainingHp <= 0) {
+      break;
+    }
+  }
+
+  return steps;
+}
+
+function buildEnemyDamageParts(
+  input: TurnPresentationInput,
+  actions: readonly YizaiTurnAction[],
+  totalDamage: number,
+): number[] {
+  const length = Math.max(1, actions.length);
+  const parts = Array.from({ length }, (_, index) =>
+    getClearDamage(input.clearEvents?.[index]),
+  );
+  const skillEvent = input.gameplayEvents.find(
+    (event): event is Extract<GameplayEvent, { type: "skillTriggered" }> =>
+      event.type === "skillTriggered",
+  );
+
+  if (skillEvent) {
+    const action = getActionFromSkillLevel(skillEvent.level);
+    const targetIndex = Math.max(
+      0,
+      actions.findIndex((item) => item === action),
+    );
+
+    const targetPartIndex = Math.min(targetIndex, parts.length - 1);
+    parts[targetPartIndex] =
+      (parts[targetPartIndex] ?? 0) + skillEvent.extraDamage;
+  }
+
+  const partsTotal = sum(parts);
+
+  if (partsTotal <= 0) {
+    parts[0] = totalDamage;
+    return parts;
+  }
+
+  if (totalDamage > partsTotal) {
+    const lastIndex = parts.length - 1;
+    parts[lastIndex] = (parts[lastIndex] ?? 0) + totalDamage - partsTotal;
+    return parts.map(roundTimelineNumber);
+  }
+
+  if (partsTotal > totalDamage) {
+    const scale = totalDamage / partsTotal;
+    let allocated = 0;
+
+    return parts.map((part, index) => {
+      if (index === parts.length - 1) {
+        return roundTimelineNumber(Math.max(0, totalDamage - allocated));
+      }
+
+      const scaled = roundTimelineNumber(part * scale);
+      allocated = roundTimelineNumber(allocated + scaled);
+      return scaled;
+    });
+  }
+
+  return parts.map(roundTimelineNumber);
 }
 
 function addYizaiActionEvents(
@@ -606,10 +776,22 @@ function addTerminalAndWaveEvents(
     won: boolean;
     lost: boolean;
     defeatAtMs: number;
+    waveStartAtMs: number;
   },
 ): void {
+  const enemyDefeatMs = getSpriteAnimationDurationMs(
+    getCharacterAnimationConfig("enemy", "defeat"),
+  );
+
   if (input.defeated) {
-    addEvent(events, "character.enemy.defeat", input.defeatAtMs, 500, "high", true);
+    addEvent(
+      events,
+      "character.enemy.defeat",
+      input.defeatAtMs,
+      enemyDefeatMs,
+      "high",
+      true,
+    );
     addEvent(events, "ui.waveCleared", input.defeatAtMs + 300, 240, "medium", false);
   }
 
@@ -617,7 +799,7 @@ function addTerminalAndWaveEvents(
     addEvent(
       events,
       "wave.start",
-      Math.min(input.defeatAtMs + PRESENTATION_TIMING.WAVE_TRANSITION_MS, PRESENTATION_TIMING.WAVE_TRANSITION_MAX_MS),
+      input.waveStartAtMs,
       0,
       "high",
       true,
@@ -629,6 +811,39 @@ function addTerminalAndWaveEvents(
       result: input.won ? "won" : "lost",
     });
   }
+}
+
+function getTotalEnemyDamage(
+  events: readonly (GameplayEvent | CombatEvent)[],
+): number {
+  return sum(
+    getCombatEvents(events)
+      .filter((event) => event.type === "enemyDamaged")
+      .map((event) => event.amount),
+  );
+}
+
+function getClearDamage(event: ClearEvent | undefined): number {
+  if (!event) {
+    return 0;
+  }
+
+  return event.damage > 0 ? event.damage : event.pieces.length * 2;
+}
+
+function getEnemyDefeatEndMs(defeatAtMs: number): number {
+  return (
+    defeatAtMs +
+    getSpriteAnimationDurationMs(getCharacterAnimationConfig("enemy", "defeat"))
+  );
+}
+
+function sum(values: readonly number[]): number {
+  return values.reduce((total, value) => total + value, 0);
+}
+
+function roundTimelineNumber(value: number): number {
+  return Math.round(value * 1000) / 1000;
 }
 
 function createTimeline(

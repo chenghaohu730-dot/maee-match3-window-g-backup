@@ -1,6 +1,7 @@
 import "./styles.css";
 import { mountGameApp } from "./ui/app.ts";
 import { mountAnimationCalibration } from "./ui/animationCalibrationView.ts";
+import { resolveGameplayDebugMode } from "./ui/debugMode.ts";
 
 const appRoot = document.querySelector<HTMLDivElement>("#app");
 
@@ -13,5 +14,7 @@ const debugMode = new URLSearchParams(window.location.search).get("debug");
 if (debugMode === "animation-calibration") {
   mountAnimationCalibration(appRoot);
 } else {
-  mountGameApp(appRoot);
+  mountGameApp(appRoot, {
+    debugMode: resolveGameplayDebugMode(debugMode),
+  });
 }

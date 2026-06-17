@@ -83,6 +83,28 @@ test("unknown vfx keys use the generic fallback instead of failing", () => {
   assert.equal(html.includes("技能闪光"), true);
 });
 
+test("battle-scoped skill vfx omits board-only rectangular layers", () => {
+  const input = {
+    state: {
+      lastComboCount: 1,
+      lastSkillLevel: "skill",
+      lastSkillText: "forestShield",
+      lastVfxKeys: ["screenShake:medium", "green_skill_shield"],
+    },
+  } satisfies Parameters<typeof renderSkillVfxLayer>[0];
+  const boardHtml = renderSkillVfxLayer(input);
+  const battleHtml = renderSkillVfxLayer(input, "battle");
+
+  assert.equal(boardHtml.includes("skill-vfx-board-glow"), true);
+  assert.equal(boardHtml.includes("skill-vfx-row-sweep"), true);
+  assert.equal(battleHtml.includes("green-skill-shield"), true);
+  assert.equal(battleHtml.includes("skill-vfx-ring"), true);
+  assert.equal(battleHtml.includes("skill-vfx-beam"), true);
+  assert.equal(battleHtml.includes("森林护盾"), true);
+  assert.equal(battleHtml.includes("skill-vfx-board-glow"), false);
+  assert.equal(battleHtml.includes("skill-vfx-row-sweep"), false);
+});
+
 test("4-match skill vfx produces skill-level visual metadata", () => {
   const result = buildSkillPlan(matchSummary(matchGroup(RED, 4)));
   const model = buildSkillVfxLayerModel({

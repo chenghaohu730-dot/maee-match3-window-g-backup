@@ -6,7 +6,7 @@ import type {
   ResolveSummary,
 } from "../src/core/board.ts";
 import type { CombatEvent } from "../src/core/combatTypes.ts";
-import type { GameplayEvent } from "../src/core/gameplayTypes.ts";
+import type { GameplayEvent, GameplayState } from "../src/core/gameplayTypes.ts";
 import {
   createEnemyAttackTimeline,
   createGameEndTimeline,
@@ -81,6 +81,70 @@ test("chain clears queue yizai actions in clear order", () => {
   assert.equal(attackAt, 100);
   assert.equal(skillAt, 940);
   assert.equal((attackAt ?? 0) < (skillAt ?? 0), true);
+});
+
+test("chain clears present one enemy hit and damage number per damaging clear", () => {
+  const timeline = createTurnTimeline({
+    summary: summary(7, 2),
+    clearEvents: [clearEvent(1, 0, 3), clearEvent(2, 2, 4)],
+    gameplayEvents: [
+      skill("skill"),
+      combat({ type: "enemyDamaged", amount: 24, enemyHp: 66 }),
+    ],
+    chainCount: 2,
+    preState: gameplayState({ enemyHp: 90, enemyMaxHp: 90 }),
+  });
+  const damageEvents = eventsOfType(timeline, "combat.damageNumber");
+  const hitEvents = eventsOfType(timeline, "character.enemy.hit");
+  const hpEvents = eventsOfType(timeline, "combat.enemyHpTween");
+
+  assert.equal(hitEvents.length, 2);
+  assert.equal(damageEvents.length, 2);
+  assert.deepEqual(
+    damageEvents.map((event) => event.data?.amount),
+    [6, 18],
+  );
+  assert.deepEqual(
+    hpEvents.map((event) => event.data?.hp),
+    [84, 66],
+  );
+});
+
+test("lethal early chain hit stops later yizai actions before the next wave starts", () => {
+  const timeline = createTurnTimeline({
+    summary: summary(12, 3),
+    clearEvents: [
+      clearEvent(1, 0, 3),
+      clearEvent(2, 2, 4),
+      clearEvent(3, 4, 5),
+    ],
+    gameplayEvents: [
+      skill("ultimate"),
+      combat({ type: "enemyDamaged", amount: 60, enemyHp: 0 }),
+      combat({ type: "enemyDefeated", wave: 1, enemyId: "forest_slime" }),
+      combat({ type: "waveStarted", wave: 2, enemyId: "pumpkin_imp" }),
+    ],
+    chainCount: 3,
+    preState: gameplayState({ enemyHp: 6, enemyMaxHp: 90 }),
+  });
+  const damageEvents = eventsOfType(timeline, "combat.damageNumber");
+  const hitEvents = eventsOfType(timeline, "character.enemy.hit");
+  const defeat = eventOfType(timeline, "character.enemy.defeat");
+  const settle = eventOfType(timeline, "board.settle");
+  const waveStart = eventOfType(timeline, "wave.start");
+
+  assert.equal(hasEvent(timeline, "character.yizai.attack"), true);
+  assert.equal(hasEvent(timeline, "character.yizai.skill"), false);
+  assert.equal(hasEvent(timeline, "character.yizai.ultimate"), false);
+  assert.equal(hitEvents.length, 1);
+  assert.equal(damageEvents.length, 1);
+  assert.equal(damageEvents[0]?.data?.amount, 6);
+  assert.equal(eventsOfType(timeline, "combat.enemyHpTween")[0]?.data?.hp, 0);
+  assert.equal(waveStart !== undefined, true);
+  assert.equal(defeat !== undefined, true);
+  assert.equal(settle !== undefined, true);
+  assert.equal((waveStart?.atMs ?? 0) >= (defeat?.atMs ?? 0) + (defeat?.durationMs ?? 0), true);
+  assert.equal((waveStart?.atMs ?? 0) >= (settle?.atMs ?? 0) + (settle?.durationMs ?? 0), true);
 });
 
 test("ultimate timeline never exceeds the configured maximum", () => {
@@ -216,6 +280,20 @@ function eventAt(
   return timeline.events.find((event) => event.type === type)?.atMs;
 }
 
+function eventOfType(
+  timeline: ReturnType<typeof createTurnTimeline>,
+  type: string,
+) {
+  return timeline.events.find((event) => event.type === type);
+}
+
+function eventsOfType(
+  timeline: ReturnType<typeof createTurnTimeline>,
+  type: string,
+) {
+  return timeline.events.filter((event) => event.type === type);
+}
+
 function summary(totalCleared: number, chainCount: number): ResolveSummary {
   return {
     totalCleared,
@@ -257,5 +335,31 @@ function combat(event: CombatEvent): GameplayEvent {
   return {
     type: "combat",
     event,
+  };
+}
+
+function gameplayState(
+  overrides: Partial<GameplayState> = {},
+): GameplayState {
+  return {
+    phase: "playing",
+    score: 0,
+    comboMax: 0,
+    playerHp: 100,
+    playerMaxHp: 100,
+    playerShield: 0,
+    enemyHp: 90,
+    enemyMaxHp: 90,
+    enemyId: "forest_slime",
+    enemyName: "森林史莱姆",
+    wave: 1,
+    totalWaves: 6,
+    enemyAttackCounter: 0,
+    enemyAttackInterval: 3,
+    totalDamageDealt: 0,
+    lastDamage: 0,
+    lastComboCount: 1,
+    lastVfxKeys: [],
+    ...overrides,
   };
 }

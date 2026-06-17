@@ -1,14 +1,26 @@
 import type {
   BoardPieceSnapshot,
+  ClearEvent,
+  MatchGroup,
   MatchCell,
   Piece,
+  PieceType,
+  ResolveSummary,
   SwapResult,
 } from "../core/board.ts";
+import type { CombatEvent, EnemyWave } from "../core/combatTypes.ts";
 import { GameplayController } from "../core/gameplayController.ts";
 import {
+  ENDLESS_DEMON_KING_WAVE,
   ENDLESS_CHALLENGE_WAVES,
   FAIRY_TALE_WAVES,
 } from "../core/waves.ts";
+import {
+  preloadForEndless,
+  preloadForFairy,
+  preloadForStartup,
+  preloadForWave,
+} from "../assets/resourceLoader.ts";
 import { defaultSkin } from "../skins/defaultSkin.ts";
 import { fairySkin } from "../skins/fairySkin.ts";
 import type { Match3Skin } from "../skins/skinTypes.ts";
@@ -58,13 +70,22 @@ import type {
   PresentationPlaybackInput,
   TurnPresentationInput,
 } from "./combatTimelineTypes.ts";
+import type { GameplayDebugMode } from "./debugMode.ts";
 import { PRESENTATION_TIMING } from "./presentationTiming.ts";
 
 type DamageFloatTarget = "enemy" | "player" | "both";
 
-export function mountGameApp(root: HTMLDivElement): void {
+export interface MountGameAppOptions {
+  debugMode?: GameplayDebugMode | undefined;
+}
+
+export function mountGameApp(
+  root: HTMLDivElement,
+  options: MountGameAppOptions = {},
+): void {
   let controller = new GameplayController({ waves: FAIRY_TALE_WAVES });
   const storage = getLocalStorage();
+  const debugMode = options.debugMode;
   let scene: SceneName = "start";
   let modal: ModalKind | null = null;
   let progress = loadPlayerProgress(storage);
@@ -97,6 +118,8 @@ export function mountGameApp(root: HTMLDivElement): void {
       particleLayer = scene === "gameplay" ? mountParticleLayer(root) : null;
     },
   });
+
+  void preloadForStartup();
 
   function render(): void {
     activeSkillVfxCleanup?.();
@@ -137,6 +160,10 @@ export function mountGameApp(root: HTMLDivElement): void {
         showTurnFeedback,
         showDamageFeedback: false,
       });
+    }
+
+    if (debugMode) {
+      appendDebugPanel(root, debugMode);
     }
 
     bindEvents();
@@ -234,6 +261,8 @@ export function mountGameApp(root: HTMLDivElement): void {
             activeGameplaySkin = resolveSkinForUniverse(universeId);
             controller = new GameplayController({ waves: FAIRY_TALE_WAVES });
             controller.startGame();
+            void preloadForFairy();
+            void preloadForWave(controller.getState().enemyId);
             lastCommittedScore = 0;
             selected = null;
             showTurnFeedback = false;
@@ -251,6 +280,7 @@ export function mountGameApp(root: HTMLDivElement): void {
         commitScoreProgress();
         controller = new GameplayController({ waves: ENDLESS_CHALLENGE_WAVES });
         controller.startGame();
+        void preloadForEndless();
         activeGameplaySkin = fairySkin;
         lastCommittedScore = 0;
         selected = null;
@@ -292,6 +322,196 @@ export function mountGameApp(root: HTMLDivElement): void {
         void handlePieceClick(button);
       });
     });
+
+    if (debugMode) {
+      root.querySelectorAll<HTMLButtonElement>("[data-debug-action]").forEach(
+        (button) => {
+          button.addEventListener("click", () => {
+            const action = button.dataset.debugAction;
+
+            if (action) {
+              void handleDebugAction(action);
+            }
+          });
+        },
+      );
+    }
+  }
+
+  async function handleDebugAction(action: string): Promise<void> {
+    switch (action) {
+      case "wave-1":
+      case "wave-2":
+      case "wave-3":
+      case "wave-4":
+      case "wave-5":
+      case "wave-6":
+        enterDebugFairyWave(Number(action.replace("wave-", "")));
+        break;
+      case "endless":
+        enterDebugEndless();
+        break;
+      case "match-3":
+        await playDebugTurn("normal");
+        break;
+      case "match-4":
+        await playDebugTurn("skill");
+        break;
+      case "match-5":
+        await playDebugTurn("ultimate");
+        break;
+      case "monster-attack":
+        playDebugMonsterAttack();
+        break;
+      case "yizai-hurt":
+        playDebugYizaiHurt();
+        break;
+      case "monster-defeat":
+        playDebugMonsterDefeat();
+        break;
+      case "result-win":
+        openDebugResult("win");
+        break;
+      case "result-lose":
+        openDebugResult("lose");
+        break;
+      case "result-endless":
+        openDebugResult("endless");
+        break;
+    }
+  }
+
+  function enterDebugFairyWave(targetWave: number): void {
+    controller = new GameplayController({ waves: FAIRY_TALE_WAVES });
+    controller.startGame();
+    activeGameplaySkin = fairySkin;
+    scene = "gameplay";
+    modal = null;
+    selected = null;
+    showTurnFeedback = false;
+    lastCommittedScore = 0;
+
+    const wave = Math.max(1, Math.min(FAIRY_TALE_WAVES.length, targetWave));
+    for (let index = 1; index < wave; index++) {
+      const state = controller.getState();
+      const damage = Number.isFinite(state.enemyMaxHp)
+        ? state.enemyMaxHp
+        : 999999;
+
+      controller.combat.applyDirectDamage(damage);
+    }
+
+    const state = controller.getState();
+    message = `调试：第 ${state.wave} 波 ${state.enemyName || state.enemyId}。`;
+    void preloadForFairy();
+    void preloadForWave(state.enemyId);
+    render();
+  }
+
+  function enterDebugEndless(): void {
+    controller = new GameplayController({ waves: ENDLESS_CHALLENGE_WAVES });
+    controller.startGame();
+    activeGameplaySkin = fairySkin;
+    scene = "gameplay";
+    modal = null;
+    selected = null;
+    showTurnFeedback = false;
+    lastCommittedScore = 0;
+    message = "调试：无尽挑战魔王。";
+    void preloadForEndless();
+    render();
+  }
+
+  async function playDebugTurn(kind: "normal" | "skill" | "ultimate"): Promise<void> {
+    ensureDebugGameplay();
+    const length = kind === "ultimate" ? 5 : kind === "skill" ? 4 : 3;
+    const summary = createDebugResolveSummary(length);
+    const clearEvent = createDebugClearEvent(length);
+    const preTurnState = controller.getState();
+    const gameplayEvents = controller.handleResolveComplete(summary);
+
+    showTurnFeedback = true;
+    message =
+      kind === "ultimate"
+        ? "调试：5 消大招演出。"
+        : kind === "skill"
+          ? "调试：4 消技能演出。"
+          : "调试：普通 3 消演出。";
+    render();
+
+    await presentationDirector.playTurnPresentation({
+      summary,
+      gameplayEvents,
+      clearEvents: [clearEvent],
+      chainCount: 1,
+      preState: preTurnState,
+      state: controller.getState(),
+    });
+
+    showTurnFeedback = false;
+    render();
+  }
+
+  function playDebugMonsterAttack(): void {
+    ensureDebugGameplay();
+    const state = controller.getState();
+    const damageEvent: CombatEvent = {
+      type: "playerDamaged",
+      amount: Math.max(1, FAIRY_TALE_WAVES[Math.max(0, state.wave - 1)]?.damage ?? 8),
+      playerHp: Math.max(0, state.playerHp - 8),
+    };
+
+    message = "调试：怪物攻击。";
+    void presentationDirector.playEnemyAttack({
+      events: [damageEvent],
+      state,
+    });
+  }
+
+  function playDebugYizaiHurt(): void {
+    ensureDebugGameplay();
+    message = "调试：亿仔受击。";
+    characterAnimationMount?.play("yizai", "hurt");
+    particleLayer?.handleBattleVfxKey("enemy_attack_hit");
+  }
+
+  function playDebugMonsterDefeat(): void {
+    ensureDebugGameplay();
+    message = "调试：怪物死亡。";
+    characterAnimationMount?.play("enemy", "defeat");
+    showTimelineNotice("Wave Cleared");
+  }
+
+  function openDebugResult(kind: "win" | "lose" | "endless"): void {
+    const wave =
+      kind === "win"
+        ? createDebugWave("debug_result_slime", "调试史莱姆", 6, 0, 0)
+        : kind === "endless"
+          ? createDebugEndlessLossWave()
+          : createDebugWave("debug_loss_enemy", "调试怪物", 999, 1, 120);
+
+    controller = new GameplayController({ waves: [wave] });
+    controller.startGame();
+    controller.handleResolveComplete(createDebugResolveSummary(3));
+    activeGameplaySkin = fairySkin;
+    scene = "gameplay";
+    modal = null;
+    selected = null;
+    showTurnFeedback = false;
+    lastCommittedScore = 0;
+    message =
+      kind === "win"
+        ? "调试：普通胜利结算。"
+        : kind === "endless"
+          ? "调试：无尽挑战结算。"
+          : "调试：普通失败结算。";
+    render();
+  }
+
+  function ensureDebugGameplay(): void {
+    if (scene !== "gameplay" || controller.getState().phase !== "playing") {
+      enterDebugFairyWave(1);
+    }
   }
 
   async function handlePresentationTimelineEvent(
@@ -353,11 +573,11 @@ export function mountGameApp(root: HTMLDivElement): void {
         applyTimelineShake(event);
         break;
       case "combat.damageNumber":
-        renderTimelineDamage(input.gameplayEvents, getDamageFloatTarget(event));
+        renderTimelineDamage(input.gameplayEvents, event);
         break;
       case "combat.enemyHpTween":
       case "combat.playerHpTween":
-        renderTimelineHp(controller.getState());
+        renderTimelineHp(event);
         break;
       case "ui.waveCleared":
         showTimelineNotice("Wave Cleared");
@@ -448,6 +668,7 @@ export function mountGameApp(root: HTMLDivElement): void {
     selected = null;
 
     try {
+      const preTurnState = controller.getState();
       const result = controller.board.swap(from, to);
 
       message = formatSwapMessage(result, controller);
@@ -480,6 +701,7 @@ export function mountGameApp(root: HTMLDivElement): void {
         gameplayEvents: controller.lastEvents,
         clearEvents: result.clearEvents,
         chainCount: result.clearEvents.length,
+        preState: preTurnState,
         state: turnState,
         boardSwap: { from, to, sequence },
       });
@@ -540,9 +762,31 @@ export function mountGameApp(root: HTMLDivElement): void {
     }
   }
 
-  function renderTimelineHp(state = controller.getState()): void {
-    updateHpPanel("enemy", state.enemyHp, state.enemyMaxHp);
-    updateHpPanel("player", state.playerHp, state.playerMaxHp);
+  function renderTimelineHp(event?: CombatTimelineEvent): void {
+    const state = controller.getState();
+    const target = getDamageFloatTarget(event);
+
+    if (target !== "player") {
+      const enemyHp = getNumericEventData(event, "hp");
+      const enemyMaxHp = getNumericEventData(event, "maxHp");
+
+      updateHpPanel(
+        "enemy",
+        enemyHp ?? state.enemyHp,
+        enemyMaxHp ?? state.enemyMaxHp,
+      );
+    }
+
+    if (target !== "enemy") {
+      const playerHp = getNumericEventData(event, "hp");
+      const playerMaxHp = getNumericEventData(event, "maxHp");
+
+      updateHpPanel(
+        "player",
+        playerHp ?? state.playerHp,
+        playerMaxHp ?? state.playerMaxHp,
+      );
+    }
   }
 
   function updateHpPanel(
@@ -577,7 +821,7 @@ export function mountGameApp(root: HTMLDivElement): void {
 
   function renderTimelineDamage(
     events: readonly TurnPresentationInput["gameplayEvents"][number][],
-    target: DamageFloatTarget = "both",
+    event?: CombatTimelineEvent,
   ): void {
     const layer = root.querySelector<HTMLElement>(".damage-float-layer");
 
@@ -585,7 +829,9 @@ export function mountGameApp(root: HTMLDivElement): void {
       return;
     }
 
-    const enemyDamage = controller.getState().lastDamage;
+    const target = getDamageFloatTarget(event);
+    const enemyDamage =
+      getNumericEventData(event, "amount") ?? controller.getState().lastDamage;
     const playerDamage = getLatestPlayerDamage(events);
     const parts: HTMLElement[] = [];
 
@@ -627,10 +873,23 @@ function isTurnPresentationInput(
   return "summary" in input && "gameplayEvents" in input;
 }
 
-function getDamageFloatTarget(event: CombatTimelineEvent): DamageFloatTarget {
-  const target = event.data?.target;
+function getDamageFloatTarget(
+  event: CombatTimelineEvent | undefined,
+): DamageFloatTarget {
+  const target = event?.data?.target;
 
   return target === "enemy" || target === "player" ? target : "both";
+}
+
+function getNumericEventData(
+  event: CombatTimelineEvent | undefined,
+  key: string,
+): number | undefined {
+  const value = event?.data?.[key];
+
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
 }
 
 function startSkillVfxAnimation(
@@ -707,6 +966,101 @@ function formatNumber(value: number): string {
   return Number.isInteger(value)
     ? String(value)
     : value.toFixed(1).replace(/\.0$/, "");
+}
+
+function appendDebugPanel(root: HTMLDivElement, mode: GameplayDebugMode): void {
+  const panel = document.createElement("aside");
+  panel.className = "debug-state-lab";
+  panel.dataset.debugMode = mode;
+  panel.innerHTML = `
+    <div class="debug-state-lab-header">
+      <strong>${mode === "battle-lab" ? "Battle Lab" : "State Lab"}</strong>
+      <span>U1</span>
+    </div>
+    <div class="debug-state-lab-grid">
+      ${debugButton("wave-1", "第1波")}
+      ${debugButton("wave-2", "第2波")}
+      ${debugButton("wave-3", "第3波")}
+      ${debugButton("wave-4", "第4波")}
+      ${debugButton("wave-5", "第5波")}
+      ${debugButton("wave-6", "第6波")}
+      ${debugButton("endless", "无尽魔王")}
+      ${debugButton("match-3", "3消")}
+      ${debugButton("match-4", "4消")}
+      ${debugButton("match-5", "5消")}
+      ${debugButton("monster-attack", "怪物攻击")}
+      ${debugButton("yizai-hurt", "亿仔受击")}
+      ${debugButton("monster-defeat", "怪物死亡")}
+      ${debugButton("result-win", "胜利结算")}
+      ${debugButton("result-lose", "失败结算")}
+      ${debugButton("result-endless", "无尽结算")}
+    </div>
+  `;
+  root.append(panel);
+}
+
+function debugButton(action: string, label: string): string {
+  return `<button type="button" data-debug-action="${action}">${label}</button>`;
+}
+
+function createDebugResolveSummary(length: 3 | 4 | 5): ResolveSummary {
+  const group = createDebugMatchGroup(length);
+  return {
+    totalCleared: length,
+    chainCount: 1,
+    wasPlayerMove: true,
+    groups: [group],
+    maxMatchLength: length,
+  };
+}
+
+function createDebugClearEvent(length: 3 | 4 | 5): ClearEvent {
+  const group = createDebugMatchGroup(length);
+
+  return {
+    pieces: group.cells.map((cell, index) => ({
+      id: `debug-piece-${length}-${index}`,
+      type: group.type,
+      x: cell.x,
+      y: cell.y,
+      isMatched: true,
+    })),
+    damage: length * 2,
+    chain: 1,
+  };
+}
+
+function createDebugMatchGroup(length: 3 | 4 | 5): MatchGroup {
+  return {
+    type: 0 satisfies PieceType,
+    length,
+    cells: Array.from({ length }, (_, x) => ({ x, y: 0 })),
+    orientation: "row",
+  };
+}
+
+function createDebugWave(
+  id: string,
+  name: string,
+  hp: number,
+  attackInterval: number,
+  damage: number,
+): EnemyWave {
+  return {
+    id,
+    name,
+    hp,
+    attackInterval,
+    damage,
+  };
+}
+
+function createDebugEndlessLossWave(): EnemyWave {
+  return {
+    ...ENDLESS_DEMON_KING_WAVE,
+    attackInterval: 1,
+    damage: 120,
+  };
 }
 
 async function playSuccessfulSwapAnimation(

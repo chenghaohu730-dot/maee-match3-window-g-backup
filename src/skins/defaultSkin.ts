@@ -3,6 +3,7 @@ import {
   REQUIRED_ASSET_KEYS,
   type AssetKey,
 } from "../assets/assetManifest.ts";
+import { getResourceUrl } from "../assets/resourceLoader.ts";
 import type { PieceType } from "../core/board.ts";
 import type {
   FallbackKind,
@@ -125,7 +126,7 @@ export function createSkinResources(
       key,
       {
         key,
-        path: override.path ?? ASSET_MANIFEST[key],
+        path: override.path ?? getResourceUrl(key) ?? ASSET_MANIFEST[key],
         available: override.available ?? false,
         fallbackKind,
         fallbackClass,

@@ -76,6 +76,7 @@ export interface TurnPresentationInput {
   vfxEvents?: readonly VfxEvent[];
   characterEvents?: readonly CharacterAnimationRuntimeEvent[];
   chainCount: number;
+  preState?: GameplayState;
   state?: GameplayState;
   boardSwap?: BoardSwapPresentation;
 }

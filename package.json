@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "build:sheets": "tsx tools/buildSpriteSheets.ts",
     "validate:sheets": "tsx tools/validateSpriteSheets.ts",
+    "audit:assets": "tsx tools/auditAssets.ts",
     "video:extract": "tsx tools/video/extractFrames.ts",
     "video:cutout": "tsx tools/video/chromaKeyCutout.ts",
     "video:align": "tsx tools/video/alignFrames.ts",
