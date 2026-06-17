@@ -218,6 +218,20 @@ public/assets/fairy/yizai/pro/yizai_hero_hurt_sheet.png
 
 游戏已有资源优先级：优先读取 `pro` sheet；没有 pro sheet 时继续使用 `public/assets/fairy/yizai/*_sheet.png` 和静态 PNG fallback。这个管线不会删除旧资源，也不会覆盖 fallback。
 
+## Window R3 当前资源记录
+
+当前五个亿仔动作资源来源为 AI 视频抽帧测试版，已接入 `public/assets/fairy/yizai/pro/` 下的 pro sprite sheet。播放配置仍以 `src/ui/characterAnimationConfig.ts` 为准：
+
+| 动作 | 帧数 | Sheet 尺寸 | 播放 FPS | 循环 | 资源来源 |
+| --- | ---: | --- | ---: | --- | --- |
+| idle | 12 | `3072x1024` | 12 | true | AI 视频抽帧测试版 |
+| attack | 16 | `4096x1024` | 20 | false | AI 视频抽帧测试版 |
+| skill | 24 | `4096x1536` | 20 | false | AI 视频抽帧测试版 |
+| ultimate | 32 | `4096x2048` | 24 | false | AI 视频抽帧测试版 |
+| hurt | 12 | `3072x1024` | 20 | false | AI 视频抽帧测试版 |
+
+怪物本窗口不接入序列帧，继续使用静态状态图策略：`monster_slime_idle`、`monster_slime_hit`、`monster_slime_attack`、`monster_slime_defeat`。表现层通过静态图切换配合轻微呼吸、受击抖动、攻击前冲和退场缩放淡出完成反馈；缺失的 `monster_slime_xxx_sheet` 不应阻塞亿仔 pro sheet 播放。
+
 ## 校验
 
 ```sh

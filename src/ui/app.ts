@@ -56,6 +56,8 @@ import type {
 } from "./combatTimelineTypes.ts";
 import { PRESENTATION_TIMING } from "./presentationTiming.ts";
 
+type DamageFloatTarget = "enemy" | "player" | "both";
+
 export function mountGameApp(root: HTMLDivElement): void {
   const controller = new GameplayController();
   const storage = getLocalStorage();
@@ -129,6 +131,7 @@ export function mountGameApp(root: HTMLDivElement): void {
         vibrationEnabled,
         skin: activeGameplaySkin,
         showTurnFeedback,
+        showDamageFeedback: false,
       });
     }
 
@@ -331,7 +334,7 @@ export function mountGameApp(root: HTMLDivElement): void {
         applyTimelineShake(event);
         break;
       case "combat.damageNumber":
-        renderTimelineDamage(input.gameplayEvents);
+        renderTimelineDamage(input.gameplayEvents, getDamageFloatTarget(event));
         break;
       case "combat.enemyHpTween":
       case "combat.playerHpTween":
@@ -552,6 +555,7 @@ export function mountGameApp(root: HTMLDivElement): void {
 
   function renderTimelineDamage(
     events: readonly TurnPresentationInput["gameplayEvents"][number][],
+    target: DamageFloatTarget = "both",
   ): void {
     const layer = root.querySelector<HTMLElement>(".damage-float-layer");
 
@@ -563,14 +567,16 @@ export function mountGameApp(root: HTMLDivElement): void {
     const playerDamage = getLatestPlayerDamage(events);
     const parts: HTMLElement[] = [];
 
-    if (enemyDamage > 0) {
+    if (target !== "player" && enemyDamage > 0) {
       parts.push(
         createDamageFloat("enemy-damage", `-${formatNumber(enemyDamage)}`),
       );
     }
 
-    if (playerDamage > 0) {
-      parts.push(createDamageFloat("player-damage", `-${formatNumber(playerDamage)}`));
+    if (target !== "enemy" && playerDamage > 0) {
+      parts.push(
+        createDamageFloat("player-damage", `-${formatNumber(playerDamage)}`),
+      );
     }
 
     layer.replaceChildren(...parts);
@@ -597,6 +603,12 @@ function isTurnPresentationInput(
   input: PresentationPlaybackInput,
 ): input is TurnPresentationInput {
   return "summary" in input && "gameplayEvents" in input;
+}
+
+function getDamageFloatTarget(event: CombatTimelineEvent): DamageFloatTarget {
+  const target = event.data?.target;
+
+  return target === "enemy" || target === "player" ? target : "both";
 }
 
 function startSkillVfxAnimation(

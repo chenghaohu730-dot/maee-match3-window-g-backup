@@ -241,6 +241,7 @@ function buildQueuedTurnTimeline(
   const defeated = hasCombatEvent(input.gameplayEvents, "enemyDefeated");
   const waveStarted = hasCombatEvent(input.gameplayEvents, "waveStarted");
   const won = hasCombatEvent(input.gameplayEvents, "gameWon");
+  const playerDamaged = hasCombatEvent(input.gameplayEvents, "playerDamaged");
   const kind = getTimelineKindForActions(actions);
   const chainExtension = getChainExtension(input.chainCount, 70);
   let actionStart = ACTION_START_MS;
@@ -285,6 +286,15 @@ function buildQueuedTurnTimeline(
   const settleDuration = getSettleDuration(kind, chainExtension);
 
   addEvent(events, "board.settle", settleStart, settleDuration, "medium", true);
+  let inputUnlockAtMs = Math.max(settleStart + settleDuration, getTargetDuration(kind));
+
+  if (playerDamaged && !defeated && !won) {
+    inputUnlockAtMs = Math.max(
+      inputUnlockAtMs,
+      addEnemyCounterAttackEvents(events, settleStart + settleDuration + ACTION_GAP_MS),
+    );
+  }
+
   addTerminalAndWaveEvents(events, {
     defeated,
     waveStarted,
@@ -297,7 +307,7 @@ function buildQueuedTurnTimeline(
     kind,
     events,
     getTargetDuration(kind),
-    Math.max(settleStart + settleDuration, getTargetDuration(kind)),
+    inputUnlockAtMs,
     won,
   );
 }
@@ -359,6 +369,56 @@ function addYizaiActionEvents(
     "low",
     false,
   );
+}
+
+function addEnemyCounterAttackEvents(
+  events: CombatTimelineEvent[],
+  atMs: number,
+): number {
+  const enemyAttackMs = getSpriteAnimationDurationMs(
+    getCharacterAnimationConfig("enemy", "attack"),
+  );
+  const yizaiHurtMs = getSpriteAnimationDurationMs(
+    getCharacterAnimationConfig("yizai", "hurt"),
+  );
+  const yizaiHurtAtMs = atMs + 240;
+  const durationMs = Math.max(
+    PRESENTATION_TIMING.ENEMY_ATTACK_MS,
+    enemyAttackMs,
+    240 + yizaiHurtMs,
+  );
+
+  addEvent(events, "character.enemy.attack", atMs, enemyAttackMs, "high", true);
+  addEvent(events, "particle.basicProjectile", atMs + 110, 300, "low", false, {
+    source: "enemy",
+  });
+  addEvent(
+    events,
+    "combat.damageNumber",
+    atMs + 180,
+    PRESENTATION_TIMING.DAMAGE_TEXT_MS,
+    "high",
+    false,
+    { target: "player" },
+  );
+  addEvent(
+    events,
+    "combat.playerHpTween",
+    atMs + 220,
+    PRESENTATION_TIMING.HP_TWEEN_MS,
+    "high",
+    true,
+  );
+  addEvent(
+    events,
+    "character.yizai.hurt",
+    yizaiHurtAtMs,
+    yizaiHurtMs,
+    "high",
+    false,
+  );
+
+  return atMs + Math.min(durationMs, PRESENTATION_TIMING.ENEMY_ATTACK_LOCK_MAX_MS);
 }
 
 function getYizaiActionTiming(action: YizaiTurnAction): {

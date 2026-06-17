@@ -44,6 +44,7 @@ export interface GameplayViewModel {
   skin: Match3Skin;
   characterAnimations?: CharacterAnimationSnapshot;
   showTurnFeedback?: boolean;
+  showDamageFeedback?: boolean;
 }
 
 export interface StartSceneViewModel {
@@ -244,7 +245,9 @@ function renderUniverseCard(
 function renderBattleStage(model: GameplayViewModel): string {
   const { state, skin } = model;
   const showTurnFeedback = model.showTurnFeedback ?? true;
-  const feedbackEvents = showTurnFeedback ? model.lastEvents : [];
+  const showDamageFeedback = model.showDamageFeedback ?? true;
+  const feedbackEvents =
+    showTurnFeedback && showDamageFeedback ? model.lastEvents : [];
   const characterAnimations =
     model.characterAnimations ??
     createCharacterAnimationSnapshot(state, []);
@@ -299,7 +302,7 @@ function renderBattleStage(model: GameplayViewModel): string {
         )}
       </div>
       ${
-        showTurnFeedback
+        showTurnFeedback && showDamageFeedback
           ? renderDamageFloatLayer(state, feedbackEvents)
           : `<div class="damage-float-layer"></div>`
       }

@@ -110,6 +110,34 @@ test("enemyDefeated prevents a follow-up enemy attack presentation", () => {
   assert.equal(timeline.inputUnlockAtMs, 0);
 });
 
+test("turn player damage queues enemy attack and yizai hurt", () => {
+  const timeline = createTurnTimeline({
+    summary: summary(3, 1),
+    clearEvents: [clearEvent(1, 0, 3)],
+    gameplayEvents: [
+      combat({ type: "enemyDamaged", amount: 6, enemyHp: 84 }),
+      combat({ type: "playerDamaged", amount: 6, playerHp: 94 }),
+    ],
+    chainCount: 1,
+  });
+
+  const enemyAttackAt = eventAt(timeline, "character.enemy.attack");
+  const yizaiHurtAt = eventAt(timeline, "character.yizai.hurt");
+
+  assert.equal(timeline.kind, "normal");
+  assert.equal(hasEvent(timeline, "combat.playerHpTween"), true);
+  assert.equal(hasEvent(timeline, "particle.basicProjectile"), true);
+  assert.equal(enemyAttackAt !== undefined, true);
+  assert.equal(yizaiHurtAt !== undefined, true);
+  assert.equal((yizaiHurtAt ?? 0) > (enemyAttackAt ?? 0), true);
+  assert.equal(
+    (timeline.inputUnlockAtMs ?? 0) <=
+      PRESENTATION_TIMING.NORMAL_TURN_MAX_MS +
+        PRESENTATION_TIMING.ENEMY_ATTACK_LOCK_MAX_MS,
+    true,
+  );
+});
+
 test("enemy attack timeline leaves enough room for yizai hurt to finish", () => {
   const timeline = createEnemyAttackTimeline({
     events: [{ type: "playerDamaged", amount: 8, playerHp: 92 }],

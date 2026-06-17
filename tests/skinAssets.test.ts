@@ -341,6 +341,30 @@ test("damage numbers render on the battle layer instead of board feedback", () =
   assert.equal(html.includes("3 COMBO"), true);
 });
 
+test("runtime gameplay renders can defer damage numbers to timeline", () => {
+  const html = renderGameplayScene({
+    state: {
+      ...createGameplayState(),
+      lastDamage: 18,
+      lastComboCount: 3,
+    },
+    pieces: createPieces(),
+    selected: null,
+    message: "选择两个相邻棋子交换。",
+    lastEvents: [],
+    progress: createDefaultProgress(),
+    soundEnabled: true,
+    vibrationEnabled: true,
+    skin: fairySkin,
+    showDamageFeedback: false,
+  });
+
+  assert.equal(html.includes("damage-float-layer"), true);
+  assert.equal(html.includes("damage-float enemy-damage"), false);
+  assert.equal(html.includes("damage-pop"), false);
+  assert.equal(html.includes("3 COMBO"), true);
+});
+
 test("locked universe cards still render as locked fallback entries", () => {
   const html = renderUniverseScene({
     progress: createDefaultProgress(),
