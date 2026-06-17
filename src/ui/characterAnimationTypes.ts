@@ -64,12 +64,22 @@ export interface SpriteAnimationConfig<StateName extends string = string> {
   frameWidth: number;
   frameHeight: number;
   frameCount: number;
+  columns?: number;
+  rows?: number;
   fps: number;
   loop: boolean;
   returnTo?: StateName;
   priority: number;
   alignment?: CharacterAnimationAlignment;
   frameEvents?: readonly CharacterFrameEvent[];
+  fallbackSheet?: SpriteAnimationFallbackSheetConfig;
+}
+
+export interface SpriteAnimationFallbackSheetConfig {
+  frameCount: number;
+  columns: number;
+  rows: number;
+  fps?: number;
 }
 
 export type CharacterAnimationConfigMap<StateName extends string> = Record<
@@ -97,6 +107,7 @@ export interface CharacterAnimationSource {
   mode: "sheet" | "fallbackImage" | "placeholder";
   key: AssetKey;
   path: string;
+  sheet?: SpriteAnimationFallbackSheetConfig;
   fallbackSheetKey?: AssetKey;
   fallbackSheetPath?: string;
   fallbackKey?: AssetKey;

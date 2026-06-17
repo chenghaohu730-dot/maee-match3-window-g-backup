@@ -798,15 +798,19 @@ p {
 
 .character-sprite {
   --character-frame-count: 1;
+  --character-sheet-columns: 1;
+  --character-sheet-rows: 1;
   flex: none;
   pointer-events: none;
 }
 
 .character-sprite.character-sheet {
   background-image: var(--character-sheet-url);
-  background-position: 0 center;
+  background-position: 0 0;
   background-repeat: no-repeat;
-  background-size: calc(var(--character-frame-count) * 100%) 100%;
+  background-size:
+    calc(var(--character-sheet-columns) * 100%)
+    calc(var(--character-sheet-rows) * 100%);
 }
 
 .maee-placeholder.has-image .maee-art-fallback,

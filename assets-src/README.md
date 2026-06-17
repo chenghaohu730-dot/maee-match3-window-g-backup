@@ -6,6 +6,10 @@
 - `yizai_3d/model`: 亿仔 3D 模型和绑定源文件。
 - `yizai_3d/renders`: 亿仔透明 PNG 渲染帧。
 - `yizai_3d/sheets`: 亿仔制作阶段 sheet 备份。
+- `yizai_video/input`: AI 绿幕动作视频输入。
+- `yizai_video/extracted`: AI 视频抽帧和抠图中间帧。
+- `yizai_video/renders`: 对齐后的 `512x512` 游戏帧。
+- `yizai_video/debug`: 抠图对比图和 bbox 调试信息。
 - `slime_3d/reference`: 史莱姆参考图。
 - `slime_3d/model`: 史莱姆 3D 模型和绑定源文件。
 - `slime_3d/renders`: 史莱姆透明 PNG 渲染帧。

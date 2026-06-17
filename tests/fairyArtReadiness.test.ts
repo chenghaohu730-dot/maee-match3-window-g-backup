@@ -287,11 +287,13 @@ test("pro yizai keys exist and legacy yizai sheets remain fallback-ready", () =>
     html.includes("data-fallback-sheet-key=\"yizai_hero_idle_sheet\""),
     true,
   );
-  assert.equal(html.includes("data-frame-count=\"4\""), true);
+  assert.equal(html.includes("data-frame-count=\"12\""), true);
+  assert.equal(html.includes("data-sprite-columns=\"6\""), true);
+  assert.equal(html.includes("data-sprite-rows=\"2\""), true);
   assert.equal(html.includes("data-fallback-key=\"yizai_hero_idle\""), true);
 });
 
-test("legacy yizai attack sheet renders with 6 horizontal frames when pro is absent", () => {
+test("legacy yizai attack fallback path remains available when pro is absent", () => {
   const resource = fairySkin.resources.yizai_hero_attack_sheet;
   const html = renderGameplayScene({
     ...createGameplayModel(fairySkin),
@@ -312,7 +314,9 @@ test("legacy yizai attack sheet renders with 6 horizontal frames when pro is abs
     html.includes("data-fallback-sheet-key=\"yizai_hero_attack_sheet\""),
     true,
   );
-  assert.equal(html.includes("data-frame-count=\"6\""), true);
+  assert.equal(html.includes("data-frame-count=\"16\""), true);
+  assert.equal(html.includes("data-sprite-columns=\"8\""), true);
+  assert.equal(html.includes("data-sprite-rows=\"2\""), true);
   assert.equal(html.includes("data-fallback-key=\"yizai_hero_attack\""), true);
   assert.equal(
     html.includes(
@@ -322,7 +326,7 @@ test("legacy yizai attack sheet renders with 6 horizontal frames when pro is abs
   );
 });
 
-test("legacy yizai skill and ultimate sheets render when pro is absent", () => {
+test("legacy yizai skill and ultimate fallback paths remain when pro is absent", () => {
   const skillHtml = renderGameplayScene({
     ...createGameplayModel(fairySkin),
     characterAnimations: {
@@ -346,7 +350,9 @@ test("legacy yizai skill and ultimate sheets render when pro is absent", () => {
     skillHtml.includes("data-fallback-sheet-key=\"yizai_hero_skill_sheet\""),
     true,
   );
-  assert.equal(skillHtml.includes("data-frame-count=\"8\""), true);
+  assert.equal(skillHtml.includes("data-frame-count=\"24\""), true);
+  assert.equal(skillHtml.includes("data-sprite-columns=\"8\""), true);
+  assert.equal(skillHtml.includes("data-sprite-rows=\"3\""), true);
   assert.equal(skillHtml.includes("data-fallback-key=\"yizai_hero_skill\""), true);
   assert.equal(
     skillHtml.includes("url('/assets/fairy/yizai/yizai_hero_skill_sheet.png')"),
@@ -362,7 +368,9 @@ test("legacy yizai skill and ultimate sheets render when pro is absent", () => {
     ),
     true,
   );
-  assert.equal(ultimateHtml.includes("data-frame-count=\"10\""), true);
+  assert.equal(ultimateHtml.includes("data-frame-count=\"32\""), true);
+  assert.equal(ultimateHtml.includes("data-sprite-columns=\"8\""), true);
+  assert.equal(ultimateHtml.includes("data-sprite-rows=\"4\""), true);
   assert.equal(
     ultimateHtml.includes("data-fallback-key=\"yizai_hero_ultimate\""),
     true,

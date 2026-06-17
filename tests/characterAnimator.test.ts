@@ -143,11 +143,35 @@ test("horizontal sprite sheets advance by frame count", () => {
 
   assert.equal(animator.play("skill"), true);
   assert.equal(element.style.backgroundSize, "800% 100%");
-  assert.equal(element.style.backgroundPosition, "0% center");
+  assert.equal(element.style.backgroundPosition, "0% 0%");
 
   animator.advanceToFrame(5);
 
-  assert.equal(element.style.backgroundPosition, "57.14285714285714% center");
+  assert.equal(element.style.backgroundPosition, "57.14285714285714% 0%");
+});
+
+test("multi-row pro sprite sheets advance by columns and rows", () => {
+  const skin = withAvailableResources(fairySkin, ["yizai_hero_attack_sheet_pro"]);
+  const element = createFakeCharacterElement();
+  const animator = new CharacterAnimator({
+    characterId: "yizai",
+    configs: {
+      attack: YIZAI_ANIMATION_CONFIG.attack as SpriteAnimationConfig<string>,
+    },
+    element,
+    skin,
+  });
+
+  assert.equal(animator.play("attack"), true);
+  assert.equal(element.dataset.frameCount, "16");
+  assert.equal(element.dataset.spriteColumns, "8");
+  assert.equal(element.dataset.spriteRows, "2");
+  assert.equal(element.style.backgroundSize, "800% 200%");
+  assert.equal(element.style.backgroundPosition, "0% 0%");
+
+  animator.advanceToFrame(9);
+
+  assert.equal(element.style.backgroundPosition, "0% 100%");
 });
 
 test("frameEvents emit at their configured frame with anchor metadata", () => {
@@ -212,11 +236,36 @@ test("yizai animation config carries pro and legacy fallback sheet keys", () => 
   assert.equal(YIZAI_ANIMATION_CONFIG.attack.fallbackKey, "yizai_hero_attack");
 });
 
+test("yizai animation config uses higher-frame pro sheet specs", () => {
+  assert.deepEqual(
+    Object.fromEntries(
+      Object.entries(YIZAI_ANIMATION_CONFIG).map(([state, config]) => [
+        state,
+        {
+          frameCount: config.frameCount,
+          fps: config.fps,
+          columns: config.columns,
+          rows: config.rows,
+          loop: config.loop,
+        },
+      ]),
+    ),
+    {
+      idle: { frameCount: 12, fps: 12, columns: 6, rows: 2, loop: true },
+      attack: { frameCount: 16, fps: 20, columns: 8, rows: 2, loop: false },
+      skill: { frameCount: 24, fps: 20, columns: 8, rows: 3, loop: false },
+      ultimate: { frameCount: 32, fps: 24, columns: 8, rows: 4, loop: false },
+      hurt: { frameCount: 12, fps: 20, columns: 6, rows: 2, loop: false },
+    },
+  );
+});
+
 test("animation duration is derived from frame count and fps", () => {
-  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.attack), 500);
-  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.skill), 667);
-  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.ultimate), 834);
-  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.hurt), 400);
+  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.idle), 1000);
+  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.attack), 800);
+  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.skill), 1200);
+  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.ultimate), 1334);
+  assert.equal(getSpriteAnimationDurationMs(YIZAI_ANIMATION_CONFIG.hurt), 600);
 });
 
 function withAvailableResources(

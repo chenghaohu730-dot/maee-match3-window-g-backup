@@ -15,6 +15,7 @@ import type {
   CharacterAnimationRuntimeEvent,
   CharacterAnimationSource,
   CharacterId,
+  SpriteAnimationFallbackSheetConfig,
   SpriteAnimationConfig,
 } from "./characterAnimationTypes.ts";
 
@@ -41,9 +42,17 @@ export interface CharacterAnimationMount {
   cleanup: () => void;
 }
 
+interface SpritePlaybackSpec {
+  frameCount: number;
+  columns: number;
+  rows: number;
+  fps: number;
+}
+
 export class CharacterAnimator<StateName extends string = string> {
   private currentState: StateName | undefined;
   private currentConfig: SpriteAnimationConfig<StateName> | undefined;
+  private currentPlayback: SpritePlaybackSpec | undefined;
   private frameTimerId: number | undefined;
   private readonly emittedFrameEvents = new Set<string>();
   private lastFrame = 1;
@@ -75,7 +84,8 @@ export class CharacterAnimator<StateName extends string = string> {
       return [];
     }
 
-    const clampedFrame = clampFrame(frame, this.currentConfig.frameCount);
+    const playback = this.currentPlayback ?? resolvePlaybackSpec(this.currentConfig);
+    const clampedFrame = clampFrame(frame, playback.frameCount);
 
     if (this.currentConfig.loop && clampedFrame < this.lastFrame) {
       this.emittedFrameEvents.clear();
@@ -130,7 +140,9 @@ export class CharacterAnimator<StateName extends string = string> {
     this.currentConfig = config;
     this.lastFrame = 1;
     this.emittedFrameEvents.clear();
-    this.applyElementState(state, config);
+    const source = resolveCharacterAnimationSource(config, this.options.skin);
+    this.currentPlayback = resolvePlaybackSpec(config, source);
+    this.applyElementState(state, config, source, this.currentPlayback);
     this.advanceToFrame(1);
     this.startPlayback();
     return true;
@@ -145,7 +157,8 @@ export class CharacterAnimator<StateName extends string = string> {
       return;
     }
 
-    const frameDurationMs = 1000 / Math.max(this.currentConfig.fps, 1);
+    const frameDurationMs =
+      1000 / Math.max(this.currentPlayback?.fps ?? this.currentConfig.fps, 1);
 
     const step = (): void => {
       if (!this.currentConfig) {
@@ -154,7 +167,10 @@ export class CharacterAnimator<StateName extends string = string> {
 
       const nextFrame = this.lastFrame + 1;
 
-      if (nextFrame > this.currentConfig.frameCount) {
+      if (
+        nextFrame >
+        (this.currentPlayback?.frameCount ?? this.currentConfig.frameCount)
+      ) {
         if (this.currentConfig.loop) {
           this.advanceToFrame(1);
           this.frameTimerId = window.setTimeout(step, frameDurationMs);
@@ -199,14 +215,14 @@ export class CharacterAnimator<StateName extends string = string> {
   private applyElementState(
     state: StateName,
     config: SpriteAnimationConfig<StateName>,
+    source: CharacterAnimationSource,
+    playback: SpritePlaybackSpec,
   ): void {
     const element = this.options.element;
 
     if (!element) {
       return;
     }
-
-    const source = resolveCharacterAnimationSource(config, this.options.skin);
 
     element.dataset.characterId = this.options.characterId;
     element.dataset.animationState = state;
@@ -225,13 +241,20 @@ export class CharacterAnimator<StateName extends string = string> {
       delete element.dataset.fallbackKey;
     }
 
-    element.dataset.frameCount = String(config.frameCount);
+    element.dataset.frameCount = String(playback.frameCount);
     element.dataset.frameWidth = String(config.frameWidth);
     element.dataset.frameHeight = String(config.frameHeight);
+    element.dataset.spriteColumns = String(playback.columns);
+    element.dataset.spriteRows = String(playback.rows);
     element.dataset.animationDurationMs = String(
-      getSpriteAnimationDurationMs(config),
+      getSpriteAnimationDurationMs({
+        frameCount: playback.frameCount,
+        fps: playback.fps,
+      }),
     );
-    element.style.setProperty("--character-frame-count", String(config.frameCount));
+    element.style.setProperty("--character-frame-count", String(playback.frameCount));
+    element.style.setProperty("--character-sheet-columns", String(playback.columns));
+    element.style.setProperty("--character-sheet-rows", String(playback.rows));
     element.style.setProperty("--character-frame-width", `${config.frameWidth}`);
     element.style.setProperty("--character-frame-height", `${config.frameHeight}`);
     updateSlotStateClass(element, this.options.characterId, state);
@@ -241,7 +264,9 @@ export class CharacterAnimator<StateName extends string = string> {
       element.style.setProperty("--character-sheet-url", `url('${source.path}')`);
       element.style.backgroundImage = `url("${source.path}")`;
       element.style.backgroundRepeat = "no-repeat";
-      element.style.backgroundSize = `${config.frameCount * 100}% 100%`;
+      element.style.backgroundSize = `${playback.columns * 100}% ${
+        playback.rows * 100
+      }%`;
       return;
     }
 
@@ -273,11 +298,12 @@ export class CharacterAnimator<StateName extends string = string> {
       return;
     }
 
-    const position = getBackgroundPositionPercent(
+    const playback = this.currentPlayback ?? resolvePlaybackSpec(this.currentConfig);
+    element.style.backgroundPosition = getBackgroundPositionPercent(
       frame,
-      this.currentConfig.frameCount,
+      playback.columns,
+      playback.rows,
     );
-    element.style.backgroundPosition = `${position}% center`;
   }
 }
 
@@ -371,6 +397,7 @@ export function resolveCharacterAnimationSource(
         fallbackSheetResource.path,
         config,
         skin,
+        config.fallbackSheet,
       );
     }
   }
@@ -401,11 +428,13 @@ function createSheetSource(
   path: string,
   config: SpriteAnimationConfig,
   skin: Match3Skin,
+  sheet?: SpriteAnimationFallbackSheetConfig,
 ): CharacterAnimationSource {
   const source: CharacterAnimationSource = {
     mode: "sheet",
     key,
     path,
+    sheet: sheet ?? resolveDefaultSheetConfig(config),
   };
 
   if (config.fallbackSheetKey) {
@@ -447,12 +476,45 @@ function clampFrame(frame: number, frameCount: number): number {
   return Math.max(1, Math.min(Math.floor(frame), Math.max(1, frameCount)));
 }
 
-function getBackgroundPositionPercent(frame: number, frameCount: number): number {
-  if (frameCount <= 1) {
-    return 0;
-  }
+function getBackgroundPositionPercent(
+  frame: number,
+  columns: number,
+  rows: number,
+): string {
+  const clampedColumns = Math.max(1, columns);
+  const clampedRows = Math.max(1, rows);
+  const frameIndex = Math.max(0, frame - 1);
+  const column = frameIndex % clampedColumns;
+  const row = Math.floor(frameIndex / clampedColumns);
+  const x = clampedColumns <= 1 ? 0 : (column / (clampedColumns - 1)) * 100;
+  const y = clampedRows <= 1 ? 0 : (row / (clampedRows - 1)) * 100;
 
-  return ((frame - 1) / (frameCount - 1)) * 100;
+  return `${x}% ${y}%`;
+}
+
+function resolvePlaybackSpec(
+  config: SpriteAnimationConfig,
+  source?: CharacterAnimationSource,
+): SpritePlaybackSpec {
+  const sheet = source?.sheet ?? resolveDefaultSheetConfig(config);
+
+  return {
+    frameCount: sheet.frameCount,
+    columns: sheet.columns,
+    rows: sheet.rows,
+    fps: sheet.fps ?? config.fps,
+  };
+}
+
+function resolveDefaultSheetConfig(
+  config: SpriteAnimationConfig,
+): SpriteAnimationFallbackSheetConfig {
+  return {
+    frameCount: config.frameCount,
+    columns: config.columns ?? config.frameCount,
+    rows: config.rows ?? 1,
+    fps: config.fps,
+  };
 }
 
 function getRuntimeEventId(event: CharacterAnimationRuntimeEvent): string {

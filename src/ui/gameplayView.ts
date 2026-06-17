@@ -982,6 +982,8 @@ function characterAnimationAttrs(
     `data-frame-width="${config.frameWidth}"`,
     `data-frame-height="${config.frameHeight}"`,
     `data-frame-count="${config.frameCount}"`,
+    `data-sprite-columns="${config.columns ?? config.frameCount}"`,
+    `data-sprite-rows="${config.rows ?? 1}"`,
     `data-animation-duration-ms="${getSpriteAnimationDurationMs(config)}"`,
     `data-sprite-key="${escapeHtml(config.key)}"`,
   ];

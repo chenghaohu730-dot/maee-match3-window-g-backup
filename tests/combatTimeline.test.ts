@@ -79,7 +79,7 @@ test("chain clears queue yizai actions in clear order", () => {
 
   assert.equal(timeline.kind, "skill");
   assert.equal(attackAt, 100);
-  assert.equal(skillAt, 640);
+  assert.equal(skillAt, 940);
   assert.equal((attackAt ?? 0) < (skillAt ?? 0), true);
 });
 
@@ -118,8 +118,8 @@ test("enemy attack timeline leaves enough room for yizai hurt to finish", () => 
   const hurt = timeline.events.find((event) => event.type === "character.yizai.hurt");
 
   assert.equal(hurt?.atMs, 240);
-  assert.equal(hurt?.durationMs, 400);
-  assert.equal(timeline.inputUnlockAtMs, 640);
+  assert.equal(hurt?.durationMs, 600);
+  assert.equal(timeline.inputUnlockAtMs, 840);
 });
 
 test("game end timeline waits for full character animations", () => {
@@ -130,8 +130,8 @@ test("game end timeline waits for full character animations", () => {
     events: [{ type: "gameLost" }],
   });
 
-  assert.equal(eventAt(won, "game.end"), 834);
-  assert.equal(eventAt(lost, "game.end"), 400);
+  assert.equal(eventAt(won, "game.end"), 1334);
+  assert.equal(eventAt(lost, "game.end"), 600);
 });
 
 test("gameLost blocks later player input", () => {
